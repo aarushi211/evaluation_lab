@@ -70,3 +70,6 @@ Also fine-tuned RoBERTAa-base, ALVERT-xxlarge and GPT-2 on UnifiedQA training da
 - If a model memorized the exact question and ans during pretraining then they should attain high accuracy while the entropy would be low for that memorized question. 
     - However, it was noted that accuracy and entropy were not positively correlated, suggesting that test's low entropy questions do not correspond to memorized QA. Hence suggests questions were not memorized. 
     - Also noted that questions came from pdfs and websites where questions and answers were on seperate pages. 
+
+### Summary
+MMLU introduced a broad mutltitask benchmark to evaluate pretraining knowledge across 57 academic subjects using zero-shot and few-shot multiple choice questions. 
