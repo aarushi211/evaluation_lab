@@ -1,5 +1,11 @@
-# MMLU paper -
-1. 57 tasks - s including elementary mathematics, US history, computer science, law, and more
+# MEASURING MASSIVE MULTITASK LANGUAGE UNDERSTANDING
+### Authors
+Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn Song, Jacob Steinhardt
+
+### Conference
+ICLR 2021
+
+1. 57 tasks - including elementary mathematics, US history, computer science, law, and more
 2. Models must possess extensive world knowledge and problem solving ability.
 3. **Findings**: Most models have near random chance accuracy and GPT-3 (latest) improves over random chance by 20% on avg.
 4. Models have lopsided performance and do not know when they are wrong. And have near random accuracy on socially imp subjects like morality and law. 
@@ -11,7 +17,7 @@
 > Even with all these benchmarks, the model's near human-level performance suggest that they are not capturing imp facets of language understanding.
 4. Though models consume huge amt of data from various specializations, current benchmarks are not measuring how capable these models actually are at learning and applying knowledge from all these domains. 
 5. MMLU instead will evaluate the model's pretrained knowledge exclusively using zero and few shot settings, where the difficulty would range from elementary level to advanced professional level and it tests both world knowledge and problem solving ability.
-6. The granularity and breadth of the subjects makes the bench,ark ideal for identifying model's blind spots
+6. The granularity and breadth of the subjects makes the benchmark ideal for identifying model's blind spots
 7. 13B models achieve random chance performance of 25% while 175B GPT-3 reaches 43.9% accuracy.
 8. Also noted that GPT-3 has almost 70% accuracy for its best subjects while near random performace for several other subjects.
 
@@ -45,6 +51,7 @@ Also fine-tuned RoBERTAa-base, ALVERT-xxlarge and GPT-2 on UnifiedQA training da
 - GPT-3 on US Foreign Policy - 69% and College Chemistry 26%
 - UnifiedQA on marketing 82.5%
 - GPT-3 performs acquires declerative knowledge better than procedural knowledge. Moral scenarios and professional knowledge also its weak point.
+    - Declerative knowledge is basically fact checking while procedural knowledge application of those facts, like solving mathematical questions using the PEDMAS rule.
 - Humans usually have more depth than breadth, while models have more breadth than depth. 
 
 **Calibration Analysis**<br>
