@@ -1,9 +1,9 @@
-## June 29
+# June 29
 ### Read
 - Read MMLU paper
 - Summarized key points
 
-## June 30
+# June 30
 ### Read
 - Read the paper again
 - Updated some key points in summary
@@ -22,3 +22,10 @@
 ## Questions
 - Is the performance drop due to position bias or option-length bias?
 - Would GPT-4 show the same behavior?
+
+## Next Steps
+- Write v1 findings
+- Perform manual error taxonomy
+- Expand analysis to more subjects
+- Try multiple shuffle seeds
+- Read MMLU-Pro
