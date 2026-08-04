@@ -14,14 +14,13 @@ These folders typically represent raw or concatenated versions of the data, ofte
 ---
 
 ## 3. Model Evaluation Experiments & Observations
-We evaluated two models—**Groq Llama-3.1-8B-Instant** and **Local Llama-3.2 (3B)**—on the `global_facts` subject (100 questions) to test shuffling sensitivity (Position Bias) and few-shot prompting:
+We evaluated two models, **Groq Llama-3.1-8B-Instant** and **Local Llama-3.2 (3B)**, on the `global_facts` subject (100 questions) to test shuffling sensitivity (Position Bias) and few-shot prompting:
 
 | Model | Setting | 0-Shot Accuracy | 0-Shot (Shuffled) | 5-Shot Accuracy | 5-Shot (Shuffled) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Llama-3.1-8B (Groq)** | JSON Mode | **40.00%** | **37.00%** | **—** | **—** |
+| **Llama-3.1-8B (Groq)** | JSON Mode | **40.00%** | **37.00%** | **43.00%** | **27.00%** |
 | **Llama-3.2 (Local)** | JSON Mode | **35.00%** | **29.00%** | **31.00%** | **32.00%** |
 
 ### Key Experimental Insights:
 1. **Option Shuffling Drops Performance**: Shuffling multiple-choice options breaks the length and position correlations. Llama-3.2's accuracy dropped from **35% to 29%** (near random chance), showing it relies heavily on length/position heuristics rather than pure knowledge.
 2. **Few-Shot Formatting Confusion**: For smaller models like Llama-3.2, few-shot examples actually **degraded** performance and caused JSON parsing issues. Seeing multiple QA examples in context led the model to output answers to the few-shot questions instead of the target question (generating keys like `question1` through `question5` instead of answering the target question).
-3. **API Key Rotation**: Groq free-tier rate limits were successfully mitigated using a custom evaluator script that rotates keys on HTTP 429 and falls back to exponential backoff with jitter.

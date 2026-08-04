@@ -18,7 +18,7 @@ Our analysis shows that **MMLU is heavily susceptible to option length bias**:
 ---
 
 ## 2. Cross-Split Data Leakage
-Ideally, validation and test splits should have zero overlap to ensure evaluations are clean. However, we identified **47 questions** that are leaked across splits:
+Ideally, validation and test splits should have zero overlap to ensure evaluations are clean. However, I identified **47 questions** that are leaked across splits:
 - **Test vs. Val**: 47 exact question matches.
 - **Test vs. Dev**: 5 exact question matches.
 - **Val vs. Dev**: 1 exact question match.
@@ -44,7 +44,7 @@ MMLU is standardly treated as a 4-choice benchmark (A, B, C, D). However, severa
 
 > [!WARNING]
 > In some cases, the correct ground-truth label points to the missing option!
-> For example, in [college_physics_test.csv](file:///c:/Users/aarus/Desktop/College/Projects/evaluation_lab/datasets/MMLU/data/data/test/college_physics_test.csv#L61) (Line 61), the correct label is **D**, but option D is **empty (NaN)**.
+> For example, in [college_physics_test.csv](evaluation_lab/datasets/MMLU/data/data/test/college_physics_test.csv#L61) (Line 61), the correct label is **D**, but option D is **empty (NaN)**.
 
 | Subject File | Line No. | Issue | Question / Label |
 | :--- | :--- | :--- | :--- |
@@ -67,7 +67,7 @@ Some questions offer duplicate choices (e.g. Option A and Option B have identica
 ---
 
 ## 4. Category and Subject-Level Bias Patterns
-By mapping the 57 subjects into four broad academic divisions (STEM, Humanities, Social Sciences, and Applied/Professional), we discovered highly localized patterns of bias:
+By mapping the 57 subjects into four broad academic divisions (STEM, Humanities, Social Sciences, and Applied/Professional), I discovered highly localized patterns of bias:
 
 | Academic Category | Total Questions | Longest Option Bias (%) | Negation/Except Questions (%) |
 | :--- | :--- | :--- | :--- |
@@ -80,13 +80,13 @@ By mapping the 57 subjects into four broad academic divisions (STEM, Humanities,
 1. **Severe STEM Length Bias**: Correct answers in STEM subjects are extremely detailed (e.g. longer formulas or detailed step-by-step options). 
    - **`global_facts`**: In the Test set, the correct option is the longest **72.0%** of the time.
    - **`elementary_mathematics`**: The correct option is the longest **64.02%** of the time.
-2. **Humanities Negation Overload**: Nearly half (**44.07%**) of all Humanities questions contain negation words (*"not"*, *"except"*, *"false"*). LLMs struggle disproportionately with negative constraint reasoning, meaning Humanities scores are heavily influenced by this linguistic structure.
+2. **Humanities Negation Overload**: Nearly half (**44.07%**) of all Humanities questions contain negation words (*"not"*, *"except"*, *"false"*). LLMs might struggle disproportionately with negative constraint reasoning, meaning Humanities scores might get influenced by this linguistic structure.
 
 ---
 
 ## How to Run the Analysis Scripts
-We have added three Python tools in your `benchmarks/MMLU/experiments/` directory to help you run and extend these checks:
-1. **[analyze_dataset.py](file:///c:/Users/aarus/Desktop/College/Projects/evaluation_lab/benchmarks/MMLU/experiments/analyze_dataset.py)**: Performs aggregate stats (class distribution, option length bias, duplicates, and anomaly count).
-2. **[find_specific_anomalies.py](file:///c:/Users/aarus/Desktop/College/Projects/evaluation_lab/benchmarks/MMLU/experiments/find_specific_anomalies.py)**: Prints the exact file names, line numbers, and contents of the questions containing missing values, identical options, or leakage.
-3. **[subject_bias_analysis.py](file:///c:/Users/aarus/Desktop/College/Projects/evaluation_lab/benchmarks/MMLU/experiments/subject_bias_analysis.py)**: Segments findings by academic categories and evaluates negation frequency.
+I have added three Python tools in your `benchmarks/MMLU/experiments/` directory to help you run and extend these checks:
+1. **[analyze_dataset.py](evaluation_lab/benchmarks/MMLU/experiments/analyze_dataset.py)**: Performs aggregate stats (class distribution, option length bias, duplicates, and anomaly count).
+2. **[find_specific_anomalies.py](evaluation_lab/benchmarks/MMLU/experiments/find_specific_anomalies.py)**: Prints the exact file names, line numbers, and contents of the questions containing missing values, identical options, or leakage.
+3. **[subject_bias_analysis.py](evaluation_lab/benchmarks/MMLU/experiments/subject_bias_analysis.py)**: Segments findings by academic categories and evaluates negation frequency.
 
