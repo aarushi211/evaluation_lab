@@ -1,0 +1,11 @@
+question_no,ground_truth,predicted,correct,provider,model,subject,shots,shuffle,limit
+1,C,C,True,ollama,llama3.2,global_facts,0,False,10
+2,B,C,False,ollama,llama3.2,global_facts,0,False,10
+3,C,B,False,ollama,llama3.2,global_facts,0,False,10
+4,A,A,True,ollama,llama3.2,global_facts,0,False,10
+5,C,B,False,ollama,llama3.2,global_facts,0,False,10
+6,A,A,True,ollama,llama3.2,global_facts,0,False,10
+7,C,B,False,ollama,llama3.2,global_facts,0,False,10
+8,C,B,False,ollama,llama3.2,global_facts,0,False,10
+9,C,B,False,ollama,llama3.2,global_facts,0,False,10
+10,B,C,False,ollama,llama3.2,global_facts,0,False,10

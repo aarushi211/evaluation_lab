@@ -69,5 +69,7 @@ def find_specific_anomalies(base_dir):
             print(f"Val File: {row['file_val']} Line: {row['line_no_val']} | Label: {row['label_val']}")
 
 if __name__ == '__main__':
-    base_dir = r"c:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data"
+    _script_dir = os.path.dirname(os.path.abspath(__file__))
+    _project_root = os.path.abspath(os.path.join(_script_dir, '..', '..', '..'))
+    base_dir = os.path.join(_project_root, 'datasets', 'MMLU', 'data', 'data')
     find_specific_anomalies(base_dir)

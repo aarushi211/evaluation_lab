@@ -16,21 +16,21 @@ Instead of focusing on building more applications, this repository explores ques
 
 ## Repository Structure
 
-papers/
-    Paper analyses and critiques
-experiments/
-    Benchmark reproductions and evaluation studies
+```
 benchmarks/
-    Original benchmark designs
+    <BenchmarkName>/
+        notes/          # Paper PDF, summary, and reading notes
+        analysis/       # Dataset limitations and observations
+        experiments/    # Python evaluation scripts
 datasets/
-    Evaluation datasets
-notes/
-    Research questions and literature summaries
+    <BenchmarkName>/
+        data/           # Raw CSV splits (dev, val, test)
+experiments/            # Cross-benchmark experiment notebooks
+```
 
 ## Current Learning Roadmap
-
-- [] HELM
-- [] MMLU
+- [x] MMLU
+- [ ] HELM
 - [ ] TruthfulQA
 - [ ] SWE-Bench
 - [ ] Arena-Hard
@@ -52,9 +52,9 @@ notes/
 
 | Paper | Status | Notes |
 |--------|--------|-------|
-| MMLU | 🚧 | Reading |
-| HELM | ⏳ | Reading |
-| TruthfulQA | ⏳ | Reading |
+| MMLU | ✅ | Completed analysis, bias detection, and local/API evaluation |
+| HELM | ⏳ | Planned |
+| TruthfulQA | ⏳ | Planned |
 | SWE-Bench | ⏳ | Planned |
 
 ## Open Questions

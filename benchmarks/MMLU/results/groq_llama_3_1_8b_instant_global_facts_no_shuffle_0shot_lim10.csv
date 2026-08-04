@@ -1,0 +1,11 @@
+question_no,ground_truth,predicted,correct,provider,model,subject,shots,shuffle,limit
+1,C,C,True,groq,llama-3.1-8b-instant,global_facts,0,False,10
+2,B,A,False,groq,llama-3.1-8b-instant,global_facts,0,False,10
+3,C,B,False,groq,llama-3.1-8b-instant,global_facts,0,False,10
+4,A,A,True,groq,llama-3.1-8b-instant,global_facts,0,False,10
+5,C,B,False,groq,llama-3.1-8b-instant,global_facts,0,False,10
+6,A,A,True,groq,llama-3.1-8b-instant,global_facts,0,False,10
+7,C,C,True,groq,llama-3.1-8b-instant,global_facts,0,False,10
+8,C,A,False,groq,llama-3.1-8b-instant,global_facts,0,False,10
+9,C,B,False,groq,llama-3.1-8b-instant,global_facts,0,False,10
+10,B,B,True,groq,llama-3.1-8b-instant,global_facts,0,False,10
