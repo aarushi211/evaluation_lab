@@ -1,0 +1,40 @@
+section,split,metric,value,notes
+basic_statistics,dev,total_questions,285.0,
+basic_statistics,dev,distinct_subjects,57.0,
+basic_statistics,val,total_questions,1531.0,
+basic_statistics,val,distinct_subjects,57.0,
+basic_statistics,test,total_questions,14042.0,
+basic_statistics,test,distinct_subjects,57.0,
+label_distribution,dev,label_A_pct,23.50877192982456,
+label_distribution,dev,label_B_pct,24.210526315789473,
+label_distribution,dev,label_C_pct,24.912280701754387,
+label_distribution,dev,label_D_pct,27.368421052631582,
+label_distribution,val,label_A_pct,24.885695623775312,
+label_distribution,val,label_B_pct,24.755062050947092,
+label_distribution,val,label_C_pct,25.27759634225996,
+label_distribution,val,label_D_pct,25.081645983017637,
+label_distribution,test,label_A_pct,22.945449366187155,
+label_distribution,test,label_B_pct,24.654607605754165,
+label_distribution,test,label_C_pct,25.509186725537674,
+label_distribution,test,label_D_pct,26.89075630252101,
+option_length_bias,dev,correct_option_longest_pct,38.24561403508772,Random chance ~25%
+option_length_bias,dev,avg_length_diff_correct_minus_avg_incorrect,3.8619883040935674,
+option_length_bias,val,correct_option_longest_pct,34.552580013063356,Random chance ~25%
+option_length_bias,val,avg_length_diff_correct_minus_avg_incorrect,0.44241236664489436,
+option_length_bias,test,correct_option_longest_pct,35.906566016237,Random chance ~25%
+option_length_bias,test,avg_length_diff_correct_minus_avg_incorrect,1.7653705550016618,
+duplicate_analysis,dev,duplicate_question_count,2.0,A refracting telescope consists of two converging lenses separated by 100 cm. The eye-piece lens has a focal length of 20 cm. The angular magnificatio...
+duplicate_analysis,val,duplicate_question_count,6.0,The recommended dose of creatine to load the muscles of a 70 kg man within one week is:...
+duplicate_analysis,test,duplicate_question_count,327.0,Which of the following statements is true?...
+cross_split_overlap,test_val,overlap_count,37.0,
+cross_split_overlap,test_dev,overlap_count,5.0,
+cross_split_overlap,val_dev,overlap_count,1.0,
+formatting_anomalies,dev,invalid_label_count,0.0,
+formatting_anomalies,dev,missing_value_count,0.0,
+formatting_anomalies,dev,identical_option_count,1.0,
+formatting_anomalies,val,invalid_label_count,0.0,
+formatting_anomalies,val,missing_value_count,2.0,
+formatting_anomalies,val,identical_option_count,3.0,
+formatting_anomalies,test,invalid_label_count,0.0,
+formatting_anomalies,test,missing_value_count,10.0,
+formatting_anomalies,test,identical_option_count,9.0,

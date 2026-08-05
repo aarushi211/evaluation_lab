@@ -1,0 +1,68 @@
+group,total,A,B,C,D
+STEM,3410,758,823,856,973
+Other (Applied/Professional),4765,1110,1211,1211,1233
+Humanities,3145,756,787,865,737
+Social Sciences,2722,598,641,650,833
+OVERALL,14042,3222,3462,3582,3776
+
+
+=== OVERALL (test split) (n=14042) ===
+  A:  3222  (22.95%)  ###########
+  B:  3462  (24.65%)  ############
+  C:  3582  (25.51%)  ############
+  D:  3776  (26.89%)  #############
+  Chi-square=45.916, p=0.0000 (SIGNIFICANT skew at p<0.05)
+  'Always guess D' heuristic would score: 26.89% (vs. 25% random chance)
+
+
+########## BY ACADEMIC CATEGORY ##########
+
+=== Humanities (n=3145) ===
+  A:   756  (24.04%)  ############
+  B:   787  (25.02%)  ############
+  C:   865  (27.50%)  #############
+  D:   737  (23.43%)  ###########
+  Chi-square=12.137, p=0.0071 (SIGNIFICANT skew at p<0.05)
+  'Always guess C' heuristic would score: 27.50% (vs. 25% random chance)
+
+=== Other (Applied/Professional) (n=4765) ===
+  A:  1110  (23.29%)  ###########
+  B:  1211  (25.41%)  ############
+  C:  1211  (25.41%)  ############
+  D:  1233  (25.88%)  ############
+  Chi-square=7.660, p=0.0526 (not significant at p<0.05)
+  'Always guess D' heuristic would score: 25.88% (vs. 25% random chance)
+
+=== STEM (n=3410) ===
+  A:   758  (22.23%)  ###########
+  B:   823  (24.13%)  ############
+  C:   856  (25.10%)  ############
+  D:   973  (28.53%)  ##############
+  Chi-square=28.543, p=0.0000 (SIGNIFICANT skew at p<0.05)
+  'Always guess D' heuristic would score: 28.53% (vs. 25% random chance)
+
+=== Social Sciences (n=2722) ===
+  A:   598  (21.97%)  ##########
+  B:   641  (23.55%)  ###########
+  C:   650  (23.88%)  ###########
+  D:   833  (30.60%)  ###############
+  Chi-square=47.837, p=0.0000 (SIGNIFICANT skew at p<0.05)
+  'Always guess D' heuristic would score: 30.60% (vs. 25% random chance)
+
+
+########## BY SUBJECT (sorted by max skew) ##########
+  high_school_statistics                        n= 216  max-letter-share=47.22%
+  professional_medicine                         n= 272  max-letter-share=44.85%
+  college_chemistry                             n= 100  max-letter-share=41.00%
+  security_studies                              n= 245  max-letter-share=40.00%
+  management                                    n= 103  max-letter-share=37.86%
+  human_aging                                   n= 223  max-letter-share=37.67%
+  college_physics                               n= 102  max-letter-share=37.25%
+  international_law                             n= 121  max-letter-share=37.19%
+  high_school_government_and_politics           n= 193  max-letter-share=36.79%
+  formal_logic                                  n= 126  max-letter-share=36.51%
+  high_school_macroeconomics                    n= 390  max-letter-share=36.41%
+  high_school_geography                         n= 198  max-letter-share=35.35%
+  high_school_microeconomics                    n= 238  max-letter-share=34.87%
+  high_school_psychology                        n= 545  max-letter-share=34.86%
+  public_relations                              n= 110  max-letter-share=34.55%

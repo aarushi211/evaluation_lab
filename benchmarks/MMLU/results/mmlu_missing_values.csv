@@ -1,0 +1,22 @@
+split,file,line_no,filepath,question,A,B,C,D,label,subject
+val,conceptual_physics_val.csv,17,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\val\conceptual_physics_val.csv,"How many electrons are there in the third shell of sodium, Na (atomic number 11)?",,One,Two,Three,B,conceptual_physics
+val,electrical_engineering_val.csv,11,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\val\electrical_engineering_val.csv,Which number system has a base of 16,Decimal,Octal,Hexadecimal,,C,electrical_engineering
+test,college_computer_science_test.csv,11,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\college_computer_science_test.csv,"Mergesort works by splitting a list of n numbers in half, sorting each half recursively, and merging the two halves. Which of the following data structures will allow mergesort to work in O(n log n) time?
+I. A singly linked list
+II. A doubly linked list
+III. An array",,III only,I and II only,"I, II, and III",D,college_computer_science
+test,college_computer_science_test.csv,95,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\college_computer_science_test.csv,"Let M be a single-tape, deterministic Turing machine with tape alphabet {blank,0,1}, and let C denote the (possibly infinite) computation of M starting with a blank tape. The input to each problem below is M, together with a positive integer n. Which of the following problems is (are) decidable?
+I. The computation C lasts for at least n steps.
+II. The computation C lasts for at least n steps, and M prints a 1 at some point after the nth step.
+III. M scans at least n distinct tape squares during the computation C.",,III only,I and II only,I and III only,D,college_computer_science
+test,college_mathematics_test.csv,9,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\college_mathematics_test.csv,"Let V be a finite-dimensional real vector space and let P be a linear transformation of V such that P^2 = P. Which of the following must be true?
+I. P is invertible.
+II. P is diagonalizable.
+III. P is either the identity transformation or the zero transformation.",,I only,II only,III only,C,college_mathematics
+test,college_mathematics_test.csv,22,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\college_mathematics_test.csv,For how many positive integers k does the ordinary decimal representation of the integer k! end in exactly 99 zeros?,,One,Four,Five,D,college_mathematics
+test,college_mathematics_test.csv,61,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\college_mathematics_test.csv,How many real roots does the polynomial 2x^5 + 8x - 7 have?,,One,Two,Three,B,college_mathematics
+test,college_physics_test.csv,61,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\college_physics_test.csv,"The first five harmonics produced by an organ pipe open at both ends are 50 Hz, 100 Hz, 150 Hz, 200 Hz, and 250 Hz. Which of the harmonics, if any, will survive once the pipe is closed at one end?","50 Hz, 150 Hz, and 250 Hz only",100 Hz and 200 Hz only,150 Hz and 250 Hz only,,D,college_physics
+test,electrical_engineering_test.csv,42,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\electrical_engineering_test.csv,Which of the following memories uses one transistor and one capacitor as basic memory unit,SRAM,DRAM,Both SRAM and DRAM,,B,electrical_engineering
+test,electrical_engineering_test.csv,69,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\electrical_engineering_test.csv,A latch is ________ sensitive,both level and edge,edge,level,,C,electrical_engineering
+test,electrical_engineering_test.csv,108,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\electrical_engineering_test.csv,Temperature variation is a/an,Digital quantity,Analog quantity,Either Digital or Analog quantity,,B,electrical_engineering
+test,electrical_engineering_test.csv,118,C:\Users\aarus\Desktop\College\Projects\evaluation_lab\datasets\MMLU\data\data\test\electrical_engineering_test.csv,Which of the following oscillators are used for low frequency (LF) applications,LC oscillators,RC oscillators,Both LC and RC Oscillators,,B,electrical_engineering
