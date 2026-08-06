@@ -9,18 +9,27 @@ benchmarks/MMLU/results/mmlu_analysis_results.csv.
 
 Arguments
 ---------
-  None (CLI). Data path is inferred as:
-    <repo>/datasets/MMLU/data/data
+  --data_dir   Folder containing test/val/dev — Colab-friendly
+               (default: <repo>/datasets/MMLU/data/data)
 
 Example
 -------
   python analyze_dataset.py
+  python analyze_dataset.py --data_dir /content/data
 """
 
 import os
+import sys
 import glob
+import argparse
 import pandas as pd
 import numpy as np
+
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+from utilities import add_data_dir_arg, resolve_data_dir  # noqa: E402
 
 
 def analyze_mmlu(base_dir):
@@ -261,7 +270,9 @@ def analyze_mmlu(base_dir):
 
 
 if __name__ == '__main__':
-    _script_dir = os.path.dirname(os.path.abspath(__file__))
-    _project_root = os.path.abspath(os.path.join(_script_dir, '..', '..', '..'))
-    base_dir = os.path.join(_project_root, 'datasets', 'MMLU', 'data', 'data')
+    parser = argparse.ArgumentParser(description="Structural analysis of MMLU CSV splits")
+    add_data_dir_arg(parser)
+    args = parser.parse_args()
+    base_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {base_dir}")
     analyze_mmlu(base_dir)

@@ -24,18 +24,27 @@ Arguments
   --split           Which MMLU split to scan  {test, val, dev}  (default: test)
   --list_examples   Print this many example questions that contain a catch-all
                     option                                      (default: 0)
+  --data_dir        Folder containing test/val/dev — Colab-friendly
+                    (default: <repo>/datasets/MMLU/data/data)
 
 Example
 -------
   python none_all_above_analysis.py --split test --list_examples 5
+  python none_all_above_analysis.py --data_dir /content/data --split test
 """
 
 import os
+import sys
 import re
 import glob
 import argparse
 import pandas as pd
 
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+from utilities import add_data_dir_arg, resolve_data_dir  # noqa: E402
 from subject_bias_analysis import get_category
 
 LABELS = ['A', 'B', 'C', 'D']
@@ -115,8 +124,8 @@ def report(df: pd.DataFrame, label: str):
 
 def run(args):
     _script_dir = os.path.dirname(os.path.abspath(__file__))
-    _project_root = os.path.abspath(os.path.join(_script_dir, '..', '..', '..'))
-    data_dir = os.path.join(_project_root, 'datasets', 'MMLU', 'data', 'data')
+    data_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {data_dir}")
 
     df = load_all(data_dir, args.split)
     if df.empty:
@@ -150,6 +159,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Check how often 'all/none of the above' style options appear and are correct (no API calls)"
     )
+    add_data_dir_arg(parser)
     parser.add_argument('--split', type=str, default='test', choices=['test', 'val', 'dev'])
     parser.add_argument('--list_examples', type=int, default=0,
                          help="Print this many example questions containing a catch-all option")

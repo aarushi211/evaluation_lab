@@ -8,8 +8,8 @@ Hunt for concrete MMLU data issues and dump them to CSV:
 
 Arguments
 ---------
-  None (CLI). Data path is inferred as:
-    <repo>/datasets/MMLU/data/data
+  --data_dir   Folder containing test/val/dev — Colab-friendly
+               (default: <repo>/datasets/MMLU/data/data)
 
 Outputs (under benchmarks/MMLU/results/)
 ----------------------------------------
@@ -20,11 +20,20 @@ Outputs (under benchmarks/MMLU/results/)
 Example
 -------
   python find_specific_anomalies.py
+  python find_specific_anomalies.py --data_dir /content/data
 """
 
 import os
+import sys
 import glob
+import argparse
 import pandas as pd
+
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+from utilities import add_data_dir_arg, resolve_data_dir  # noqa: E402
 
 
 def find_specific_anomalies(base_dir):
@@ -178,7 +187,9 @@ def find_specific_anomalies(base_dir):
 
 
 if __name__ == '__main__':
-    _script_dir = os.path.dirname(os.path.abspath(__file__))
-    _project_root = os.path.abspath(os.path.join(_script_dir, '..', '..', '..'))
-    base_dir = os.path.join(_project_root, 'datasets', 'MMLU', 'data', 'data')
+    parser = argparse.ArgumentParser(description="Find specific MMLU data anomalies")
+    add_data_dir_arg(parser)
+    args = parser.parse_args()
+    base_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {base_dir}")
     find_specific_anomalies(base_dir)

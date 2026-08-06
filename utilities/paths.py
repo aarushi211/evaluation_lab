@@ -11,8 +11,11 @@ Functions
       Insert that root on sys.path so `import utilities` works.
   dataset_dir(benchmark, *subpaths, from_file=None)
       Path under datasets/<benchmark>/… (e.g. dataset_dir("MMLU", "data", "data")).
+  resolve_data_dir(data_dir=None, benchmark="MMLU", from_file=None)
+      Use an explicit --data_dir if given, else the default repo dataset path.
+      The resolved path should contain test/ (and usually dev/, val/).
 
-No CLI arguments — library helper only.
+No CLI arguments — library helper only. Pair with utilities.cli.add_data_dir_arg.
 """
 
 from __future__ import annotations
@@ -63,3 +66,20 @@ def dataset_dir(benchmark: str, *subpaths: str, from_file: Optional[str] = None)
         -> <root>/datasets/MMLU/data/data
     """
     return os.path.join(project_root(from_file), "datasets", benchmark, *subpaths)
+
+
+def resolve_data_dir(
+    data_dir: Optional[str] = None,
+    *,
+    benchmark: str = "MMLU",
+    from_file: Optional[str] = None,
+) -> str:
+    """
+    Resolve the dataset root (folder containing test/, optionally dev/, val/).
+
+    If data_dir is set (e.g. from --data_dir in Colab), expanduser + abspath.
+    Otherwise fall back to <repo>/datasets/<benchmark>/data/data.
+    """
+    if data_dir:
+        return os.path.abspath(os.path.expanduser(data_dir))
+    return dataset_dir(benchmark, "data", "data", from_file=from_file)

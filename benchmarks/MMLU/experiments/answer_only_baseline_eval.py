@@ -25,11 +25,15 @@ Arguments
   --subjects   Comma-separated subject list, or "all"     (default: all)
   --limit      Total questions to sample across subjects  (default: 100)
   --seed       Sampling RNG seed                          (default: 42)
+  --data_dir   Folder containing test/ — Colab-friendly
+               (default: <repo>/datasets/MMLU/data/data)
 
 Example
 -------
   python answer_only_baseline_eval.py --provider groq --model llama-3.1-8b-instant \\
       --subjects all --limit 200 --json
+
+  python answer_only_baseline_eval.py --data_dir /content/data --limit 50
 """
 
 import os
@@ -45,13 +49,14 @@ if _ROOT not in sys.path:
 
 from utilities import (  # noqa: E402
     LLMEvaluator,
+    add_data_dir_arg,
     add_llm_args,
     append_result_row,
-    dataset_dir,
     extract_answer,
     load_processed_ids,
     make_question_id,
     project_root,
+    resolve_data_dir,
 )
 
 FIELDNAMES = [
@@ -118,7 +123,8 @@ def one_sample_proportion_test(correct: int, total: int, null_p: float = 0.25):
 
 
 def run(args):
-    data_dir = dataset_dir("MMLU", "data", "data", from_file=__file__)
+    data_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {data_dir}")
 
     if args.subjects.strip().lower() == "all":
         test_dir = os.path.join(data_dir, "test")
@@ -223,6 +229,7 @@ if __name__ == "__main__":
         description="Test whether a model can beat chance using ONLY the options, question text hidden"
     )
     add_llm_args(parser)
+    add_data_dir_arg(parser)
     parser.add_argument(
         "--subjects",
         type=str,

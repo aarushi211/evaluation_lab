@@ -35,11 +35,15 @@ Arguments
   --limit_per_group  Max questions per negation group / subject (default: 20)
   --min_per_group    Min questions required in BOTH groups      (default: 10)
   --seed             Sampling RNG seed                          (default: 42)
+  --data_dir         Folder containing test/ — Colab-friendly
+                     (default: <repo>/datasets/MMLU/data/data)
 
 Example
 -------
   python negation_impact.py --provider anthropic --model claude-3-5-haiku-latest \\
       --subjects all --limit_per_group 20 --min_per_group 10 --json
+
+  python negation_impact.py --data_dir /content/data --limit_per_group 10
 """
 
 import os
@@ -55,14 +59,15 @@ if _ROOT not in sys.path:
 
 from utilities import (  # noqa: E402
     LLMEvaluator,
+    add_data_dir_arg,
     add_llm_args,
     append_result_row,
-    dataset_dir,
     extract_answer,
     format_question,
     load_processed_ids,
     make_question_id,
     project_root,
+    resolve_data_dir,
 )
 
 NEGATION_PATTERN = r"\b(?:not|except|false|incorrect|wrong)\b"
@@ -147,7 +152,8 @@ def two_proportion_z_test(correct_a, total_a, correct_b, total_b):
 
 
 def run(args):
-    data_dir = dataset_dir("MMLU", "data", "data", from_file=__file__)
+    data_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {data_dir}")
 
     if args.subjects.strip().lower() == "all":
         test_dir = os.path.join(data_dir, "test")
@@ -272,6 +278,7 @@ if __name__ == "__main__":
         description="Test whether negation in questions hurts LLM accuracy on MMLU"
     )
     add_llm_args(parser)
+    add_data_dir_arg(parser)
     parser.add_argument(
         "--subjects",
         type=str,

@@ -28,11 +28,16 @@ Arguments
   --shots      Number of few-shot examples from the dev split (default: 0)
   --shuffle    Shuffle A–D option order (deterministic per row index) (flag)
   --limit      Max test questions to evaluate             (default: 10)
+  --data_dir   Folder containing test/ (and optionally dev/) — Colab-friendly
+               (default: <repo>/datasets/MMLU/data/data)
 
 Example
 -------
   python evaluate_mmlu.py --provider openai --model gpt-4o-mini \\
       --subject global_facts --shots 5 --limit 100 --json
+
+  # Colab / custom layout:
+  python evaluate_mmlu.py --data_dir /content/data --subject anatomy --limit 10
 """
 
 import os
@@ -48,15 +53,16 @@ if _ROOT not in sys.path:
 
 from utilities import (  # noqa: E402
     LLMEvaluator,
+    add_data_dir_arg,
     add_llm_args,
     append_result_row,
-    dataset_dir,
     extract_answer,
     format_question,
     generate_few_shot_prefix,
     load_processed_ids,
     make_question_id,
     project_root,
+    resolve_data_dir,
 )
 
 FIELDNAMES = [
@@ -208,6 +214,7 @@ if __name__ == "__main__":
         description="Evaluate MMLU subjects using ollama / groq / openai / anthropic / gemini"
     )
     add_llm_args(parser)
+    add_data_dir_arg(parser)
     parser.add_argument("--subject", type=str, default="anatomy", help="MMLU subject to run")
     parser.add_argument("--shots", type=int, default=0, help="Number of few-shot examples")
     parser.add_argument(
@@ -220,7 +227,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    data_dir = dataset_dir("MMLU", "data", "data", from_file=__file__)
+    data_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {data_dir}")
 
     try:
         evaluator = LLMEvaluator(

@@ -9,18 +9,27 @@ Also exports CATEGORIES / get_category for reuse by other dataset scripts.
 
 Arguments
 ---------
-  None (CLI). Data path is inferred as:
-    <repo>/datasets/MMLU/data/data
+  --data_dir   Folder containing test/ — Colab-friendly
+               (default: <repo>/datasets/MMLU/data/data)
 
 Example
 -------
   python subject_bias_analysis.py
+  python subject_bias_analysis.py --data_dir /content/data
 """
 
 import os
+import sys
 import glob
+import argparse
 import pandas as pd
 import numpy as np
+
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+from utilities import add_data_dir_arg, resolve_data_dir  # noqa: E402
 
 # MMLU High-Level Category Mapping
 CATEGORIES = {
@@ -153,7 +162,9 @@ def analyze_subject_biases(base_dir):
     print(f"\nSaved CSV files to: {results_dir}")
 
 if __name__ == '__main__':
-    _script_dir = os.path.dirname(os.path.abspath(__file__))
-    _project_root = os.path.abspath(os.path.join(_script_dir, '..', '..', '..'))
-    base_dir = os.path.join(_project_root, 'datasets', 'MMLU', 'data', 'data')
+    parser = argparse.ArgumentParser(description="Measure MMLU subject/category biases")
+    add_data_dir_arg(parser)
+    args = parser.parse_args()
+    base_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {base_dir}")
     analyze_subject_biases(base_dir)

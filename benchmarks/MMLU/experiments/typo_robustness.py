@@ -38,11 +38,15 @@ Arguments
   --limit      Total questions to sample                  (default: 100)
   --typo_rate  Fraction of eligible words to perturb      (default: 0.15)
   --seed       Sampling / typo RNG seed                   (default: 42)
+  --data_dir   Folder containing test/ — Colab-friendly
+               (default: <repo>/datasets/MMLU/data/data)
 
 Example
 -------
   python typo_robustness.py --provider gemini --model gemini-2.0-flash \\
       --subjects all --limit 100 --typo_rate 0.15 --json
+
+  python typo_robustness.py --data_dir /content/data --limit 50
 """
 
 import os
@@ -60,14 +64,15 @@ if _ROOT not in sys.path:
 
 from utilities import (  # noqa: E402
     LLMEvaluator,
+    add_data_dir_arg,
     add_llm_args,
     append_result_row,
-    dataset_dir,
     extract_answer,
     format_question,
     load_processed_ids,
     make_question_id,
     project_root,
+    resolve_data_dir,
 )
 
 QWERTY_ADJACENCY = {
@@ -236,7 +241,8 @@ def build_sample(data_dir: str, subjects, total_limit: int, seed: int) -> pd.Dat
 
 
 def run(args):
-    data_dir = dataset_dir("MMLU", "data", "data", from_file=__file__)
+    data_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {data_dir}")
 
     if args.subjects.strip().lower() == "all":
         test_dir = os.path.join(data_dir, "test")
@@ -357,6 +363,7 @@ if __name__ == "__main__":
         description="Test whether typos in questions hurt LLM accuracy on MMLU"
     )
     add_llm_args(parser)
+    add_data_dir_arg(parser)
     parser.add_argument(
         "--subjects",
         type=str,
