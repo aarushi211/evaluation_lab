@@ -12,9 +12,24 @@ correct to reason about at all.
 
 Checkpointing
 -------------
-Same pattern as negation_impact / typo_robustness: each result is appended
-to the output CSV immediately, and rerunning the exact same command
-auto-resumes by skipping already-completed question_ids.
+Each result is appended to the output CSV immediately. Rerunning the exact
+same command auto-resumes by skipping already-completed question_ids.
+
+Arguments
+---------
+  --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
+  --model      Model name / id                            (default: llama3.2)
+  --api_key    API key; comma-separated for rotation      (optional; else env)
+  --json       Request JSON-shaped A/B/C/D answers        (flag)
+
+  --subjects   Comma-separated subject list, or "all"     (default: all)
+  --limit      Total questions to sample across subjects  (default: 100)
+  --seed       Sampling RNG seed                          (default: 42)
+
+Example
+-------
+  python answer_only_baseline_eval.py --provider groq --model llama-3.1-8b-instant \\
+      --subjects all --limit 200 --json
 """
 
 import os

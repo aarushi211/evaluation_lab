@@ -21,11 +21,25 @@ To isolate the negation effect:
 
 Checkpointing
 -------------
-Every question's result is appended to the output CSV immediately after it's
-evaluated (not buffered until the end). If the script is interrupted (e.g. a
-Groq free-tier rate limit kills the process), just rerun the exact same
-command: it detects already-completed question_ids in the output file and
-skips them, picking up where it left off.
+Every question's result is appended to the output CSV immediately. Rerun the
+exact same command to resume from already-completed question_ids.
+
+Arguments
+---------
+  --provider         {ollama, groq, openai, anthropic, gemini}  (default: ollama)
+  --model            Model name / id                            (default: llama3.2)
+  --api_key          API key; comma-separated for rotation      (optional; else env)
+  --json             Request JSON-shaped A/B/C/D answers        (flag)
+
+  --subjects         Comma-separated subject list, or "all"     (default: all)
+  --limit_per_group  Max questions per negation group / subject (default: 20)
+  --min_per_group    Min questions required in BOTH groups      (default: 10)
+  --seed             Sampling RNG seed                          (default: 42)
+
+Example
+-------
+  python negation_impact.py --provider anthropic --model claude-3-5-haiku-latest \\
+      --subjects all --limit_per_group 20 --min_per_group 10 --json
 """
 
 import os

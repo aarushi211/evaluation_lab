@@ -1,3 +1,22 @@
+"""
+subject_bias_analysis.py
+
+Measure option-length / position cues and negation density by MMLU subject
+and high-level academic category (STEM / Humanities / Social Sciences / Other).
+
+Writes category and subject summary CSVs under benchmarks/MMLU/results/.
+Also exports CATEGORIES / get_category for reuse by other dataset scripts.
+
+Arguments
+---------
+  None (CLI). Data path is inferred as:
+    <repo>/datasets/MMLU/data/data
+
+Example
+-------
+  python subject_bias_analysis.py
+"""
+
 import os
 import glob
 import pandas as pd

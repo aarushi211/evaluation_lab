@@ -3,8 +3,25 @@ evaluate_mmlu.py
 
 Standard MMLU subject evaluation (zero-/few-shot, optional option shuffle).
 
-Provider / parsing / prompting live in the shared `utilities` package so other
-benchmarks can reuse the same client without copying this file.
+Uses utilities.LLMEvaluator so the same run works with ollama / groq / openai /
+anthropic / gemini without changing this script.
+
+Arguments
+---------
+  --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
+  --model      Model name / id                            (default: llama3.2)
+  --api_key    API key; comma-separated for rotation      (optional; else env)
+  --json       Request JSON-shaped A/B/C/D answers        (flag)
+
+  --subject    MMLU subject slug                          (default: anatomy)
+  --shots      Number of few-shot examples from the dev split (default: 0)
+  --shuffle    Shuffle A–D option order (deterministic per row index) (flag)
+  --limit      Max test questions to evaluate             (default: 10)
+
+Example
+-------
+  python evaluate_mmlu.py --provider openai --model gpt-4o-mini \\
+      --subject global_facts --shots 5 --limit 100 --json
 """
 
 import os

@@ -11,6 +11,15 @@ Uses a chi-square goodness-of-fit test against the expected uniform
 25%/25%/25%/25% distribution, both overall and per academic category
 (reusing the STEM/Humanities/Social Sciences/Other split from
 subject_bias_analysis.py).
+
+Arguments
+---------
+  --split         Which MMLU split to scan  {test, val, dev}  (default: test)
+  --per_subject   Also print a per-subject skew ranking       (flag)
+
+Example
+-------
+  python answer_position_bias.py --split test --per_subject
 """
 
 import os

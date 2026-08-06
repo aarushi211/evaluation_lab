@@ -1,8 +1,25 @@
 """
-Shared evaluation utilities for the Evaluation Lab.
+utilities/__init__.py
+
+Shared evaluation toolkit for the Evaluation Lab.
 
 Import from here in benchmark scripts so provider / parsing / checkpointing
-logic does not get reimplemented per paper.
+logic does not get reimplemented per paper (MMLU, HELM, TruthfulQA, …).
+
+Public exports
+--------------
+  load_dotenv, project_root, ensure_project_on_path, dataset_dir
+  LLMEvaluator, SUPPORTED_PROVIDERS
+  format_question, generate_few_shot_prefix, extract_answer
+  make_question_id, load_processed_ids, append_result_row
+  add_llm_args
+
+Shared CLI flags (via add_llm_args)
+----------------------------------
+  --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
+  --model      Model name / id                            (default: llama3.2)
+  --api_key    API key; comma-separated for rotation      (optional; else env)
+  --json       Request JSON-shaped A/B/C/D answers        (flag)
 """
 
 from utilities.env import load_dotenv

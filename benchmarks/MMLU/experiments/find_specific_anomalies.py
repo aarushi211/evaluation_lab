@@ -1,3 +1,27 @@
+"""
+find_specific_anomalies.py
+
+Hunt for concrete MMLU data issues and dump them to CSV:
+  - missing / blank fields
+  - identical option text within a question
+  - cross-split leakage (same question text in test and val)
+
+Arguments
+---------
+  None (CLI). Data path is inferred as:
+    <repo>/datasets/MMLU/data/data
+
+Outputs (under benchmarks/MMLU/results/)
+----------------------------------------
+  mmlu_missing_values.csv
+  mmlu_identical_options.csv
+  mmlu_cross_split_leakage_test_val.csv
+
+Example
+-------
+  python find_specific_anomalies.py
+"""
+
 import os
 import glob
 import pandas as pd

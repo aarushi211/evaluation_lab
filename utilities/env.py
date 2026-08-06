@@ -1,4 +1,20 @@
-"""Environment helpers."""
+"""
+env.py
+
+Load a project-root `.env` into os.environ without an external dependency.
+
+Walks upward from a starting directory until it finds `.env`, then parses
+simple KEY=VALUE lines (supports optional quotes; ignores blank/# comments).
+
+No CLI arguments — library helper only.
+
+Typical keys used by utilities.llm
+----------------------------------
+  GROQ_API_KEY / GROQ_API_KEY_1 ...
+  OPENAI_API_KEY / OPENAI_API_KEY_1 ...
+  ANTHROPIC_API_KEY / ANTHROPIC_API_KEY_1 ...
+  GEMINI_API_KEY or GOOGLE_API_KEY / GEMINI_API_KEY_1 ...
+"""
 
 from __future__ import annotations
 

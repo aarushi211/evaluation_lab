@@ -1,4 +1,19 @@
-"""Append-only result checkpointing for long evaluation runs."""
+"""
+checkpoint.py
+
+Append-only CSV helpers so long evaluation runs can resume after interruption.
+
+Functions
+---------
+  make_question_id(subject, question)
+      Stable 12-char MD5 of "subject::question".
+  load_processed_ids(out_path, id_column="question_id")
+      Set of IDs already written to an existing results CSV.
+  append_result_row(out_path, row, fieldnames=None)
+      Append one row (creates header on first write; flush + fsync).
+
+No CLI arguments — library helper only.
+"""
 
 from __future__ import annotations
 

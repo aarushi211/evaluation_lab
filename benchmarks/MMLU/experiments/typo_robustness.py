@@ -23,12 +23,26 @@ testing reading robustness, not making the options unrecognizable.
 
 Checkpointing
 -------------
-Each question is evaluated as a pair (original + typo'd) and the row is
-appended to the output CSV immediately, one question at a time (2 API calls
-per row). If interrupted, just rerun the exact same command: it detects
-already-completed question_ids and skips them. Note: if a run is killed
-mid-pair (after the original call but before the typo call), that pair is
-simply re-run from scratch on resume so no partial/inconsistent rows are kept.
+Each question is evaluated as a pair (original + typo'd) and appended to the
+CSV immediately (2 API calls per row). Rerun the same command to resume.
+If a run dies mid-pair, that pair is re-run from scratch on resume.
+
+Arguments
+---------
+  --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
+  --model      Model name / id                            (default: llama3.2)
+  --api_key    API key; comma-separated for rotation      (optional; else env)
+  --json       Request JSON-shaped A/B/C/D answers        (flag)
+
+  --subjects   Comma-separated subject list, or "all"     (default: all)
+  --limit      Total questions to sample                  (default: 100)
+  --typo_rate  Fraction of eligible words to perturb      (default: 0.15)
+  --seed       Sampling / typo RNG seed                   (default: 42)
+
+Example
+-------
+  python typo_robustness.py --provider gemini --model gemini-2.0-flash \\
+      --subjects all --limit 100 --typo_rate 0.15 --json
 """
 
 import os

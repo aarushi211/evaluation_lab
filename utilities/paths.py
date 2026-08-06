@@ -1,4 +1,19 @@
-"""Project / dataset path helpers."""
+"""
+paths.py
+
+Resolve the Evaluation Lab repo root and dataset directories from any script.
+
+Functions
+---------
+  project_root(from_file=None)
+      Absolute path to the repo root (directory containing utilities/ + benchmarks/).
+  ensure_project_on_path(from_file=None)
+      Insert that root on sys.path so `import utilities` works.
+  dataset_dir(benchmark, *subpaths, from_file=None)
+      Path under datasets/<benchmark>/… (e.g. dataset_dir("MMLU", "data", "data")).
+
+No CLI arguments — library helper only.
+"""
 
 from __future__ import annotations
 

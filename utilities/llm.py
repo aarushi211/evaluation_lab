@@ -1,20 +1,36 @@
 """
-Multi-provider LLM client for evaluation scripts.
+llm.py
 
-Supported providers:
-  - ollama     local generate API (default http://localhost:11434/api/generate)
-  - groq       OpenAI-compatible chat completions
-  - openai     OpenAI chat completions
-  - anthropic  Anthropic Messages API
-  - gemini     Google Gemini via OpenAI-compatible endpoint
+Multi-provider LLM client for evaluation scripts (LLMEvaluator).
 
-API keys are read from --api_key (comma-separated) or environment variables:
+Supported providers
+-------------------
+  ollama      Local generate API (default http://localhost:11434/api/generate)
+  groq        OpenAI-compatible chat completions
+  openai      OpenAI chat completions
+  anthropic   Anthropic Messages API
+  gemini      Google Gemini via OpenAI-compatible endpoint
+
+API keys (--api_key or env; comma-separated / numbered suffixes for rotation)
+---------------------------------------------------------------------------
   GROQ_API_KEY / GROQ_API_KEY_1 ...
   OPENAI_API_KEY / OPENAI_API_KEY_1 ...
   ANTHROPIC_API_KEY / ANTHROPIC_API_KEY_1 ...
   GEMINI_API_KEY or GOOGLE_API_KEY / GEMINI_API_KEY_1 ...
 
+LLMEvaluator constructor arguments
+----------------------------------
+  provider      One of SUPPORTED_PROVIDERS
+  model_name    Provider model id (e.g. llama3.2, gpt-4o-mini, gemini-2.0-flash)
+  api_key       Optional explicit key(s); else env vars above
+  api_url       Optional override of the default endpoint URL
+  use_json      If True, ask for {"answer": "A"|"B"|"C"|"D"} when supported
+  max_tokens    Completion budget (default 20; anthropic uses at least 32)
+  temperature   Sampling temperature (default 0.0)
+  timeout       HTTP timeout in seconds (default 60)
+
 Key rotation + exponential backoff on HTTP 429 is shared across cloud providers.
+This module is a library — CLI flags live in utilities.cli.add_llm_args.
 """
 
 from __future__ import annotations

@@ -1,4 +1,19 @@
-"""Multiple-choice prompting and answer parsing (A/B/C/D)."""
+"""
+mcq.py
+
+Multiple-choice (A/B/C/D) prompting and answer parsing for MMLU-style evals.
+
+Functions
+---------
+  format_question(question, options, include_answer=False, correct_label=None)
+      Build a standard "Question: … / A. … / Answer:" prompt.
+  generate_few_shot_prefix(dev_df, num_shots=5)
+      Concatenate labeled examples from a labeled MCQ DataFrame.
+  extract_answer(model_output)
+      Parse A/B/C/D from free text or {"answer": "X"} JSON; else "N/A".
+
+No CLI arguments — library helper only.
+"""
 
 from __future__ import annotations
 

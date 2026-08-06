@@ -1,3 +1,22 @@
+"""
+analyze_dataset.py
+
+Basic structural analysis of the MMLU CSV splits (dev / val / test).
+
+Reports question counts, label distributions, missing values, identical
+options, and related formatting anomalies. Writes a summary CSV to
+benchmarks/MMLU/results/mmlu_analysis_results.csv.
+
+Arguments
+---------
+  None (CLI). Data path is inferred as:
+    <repo>/datasets/MMLU/data/data
+
+Example
+-------
+  python analyze_dataset.py
+"""
+
 import os
 import glob
 import pandas as pd

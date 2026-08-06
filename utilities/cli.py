@@ -1,4 +1,18 @@
-"""Shared argparse helpers for evaluation scripts."""
+"""
+cli.py
+
+Shared argparse helpers so every eval script exposes the same LLM flags.
+
+add_llm_args(parser, default_provider="ollama", default_model="llama3.2")
+registers:
+
+  --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
+  --model      Model name / id                            (default: llama3.2)
+  --api_key    API key; comma-separated for key rotation  (optional)
+  --json       Request JSON-shaped A/B/C/D answers        (flag)
+
+Scripts typically call add_llm_args(parser) then add their own flags.
+"""
 
 from __future__ import annotations
 

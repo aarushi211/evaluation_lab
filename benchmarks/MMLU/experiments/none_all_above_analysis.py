@@ -14,6 +14,16 @@ If catch-all options are correct far more/less than 25% of the time
 whenever they appear, that's an exploitable prior: a model (or human)
 could learn "when in doubt, pick the 'all of the above' option" (or
 avoid it) without understanding the question at all.
+
+Arguments
+---------
+  --split           Which MMLU split to scan  {test, val, dev}  (default: test)
+  --list_examples   Print this many example questions that contain a catch-all
+                    option                                      (default: 0)
+
+Example
+-------
+  python none_all_above_analysis.py --split test --list_examples 5
 """
 
 import os
