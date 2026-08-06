@@ -17,6 +17,7 @@ Instead of focusing on building more applications, this repository explores ques
 ## Repository Structure
 
 ```
+utilities/              # Shared eval toolkit (LLM clients, MCQ parsing, checkpoints)
 benchmarks/
     <BenchmarkName>/
         notes/          # Paper PDF, summary, and reading notes
@@ -26,6 +27,33 @@ datasets/
     <BenchmarkName>/
         data/           # Raw CSV splits (dev, val, test)
 experiments/            # Cross-benchmark experiment notebooks
+```
+
+### Shared utilities
+
+`utilities/` holds reusable pieces for future papers (HELM, TruthfulQA, …):
+
+| Module | Role |
+|--------|------|
+| `llm.py` | Multi-provider client: `ollama`, `groq`, `openai`, `anthropic`, `gemini` |
+| `mcq.py` | A–D prompting + answer extraction |
+| `checkpoint.py` | Append-only CSV resume helpers |
+| `env.py` / `paths.py` / `cli.py` | `.env` loading, dataset paths, shared CLI flags |
+
+Put API keys in a root `.env` (see `.gitignore`):
+
+```
+GROQ_API_KEY=...
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+GEMINI_API_KEY=...   # or GOOGLE_API_KEY
+```
+
+Example:
+
+```bash
+python benchmarks/MMLU/experiments/evaluate_mmlu.py \
+  --provider openai --model gpt-4o-mini --subject anatomy --limit 10 --json
 ```
 
 ## Current Learning Roadmap
