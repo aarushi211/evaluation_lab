@@ -15,6 +15,10 @@ whenever they appear, that's an exploitable prior: a model (or human)
 could learn "when in doubt, pick the 'all of the above' option" (or
 avoid it) without understanding the question at all.
 
+Output
+------
+  benchmarks/MMLU/results/none_all_above_{split}.csv
+
 Arguments
 ---------
   --split           Which MMLU split to scan  {test, val, dev}  (default: test)
@@ -134,7 +138,7 @@ def run(args):
             print(f"  [{row['subject']}] Catchall={row['catchall_letter']} | "
                   f"GroundTruth={row['label']} | Q: {str(row['question'])[:80]}...")
 
-    out_dir = os.path.join(_script_dir, '..', 'analysis')
+    out_dir = os.path.join(_script_dir, '..', 'results')
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"none_all_above_{args.split}.csv")
     cols = ['subject', 'category', 'question', 'label', 'has_catchall', 'catchall_letter', 'catchall_is_correct']

@@ -12,6 +12,10 @@ Uses a chi-square goodness-of-fit test against the expected uniform
 (reusing the STEM/Humanities/Social Sciences/Other split from
 subject_bias_analysis.py).
 
+Output
+------
+  benchmarks/MMLU/results/answer_position_bias_{split}.csv
+
 Arguments
 ---------
   --split         Which MMLU split to scan  {test, val, dev}  (default: test)
@@ -128,7 +132,7 @@ def run(args):
         for subject, total, max_pct in subject_rows[:15]:
             print(f"  {subject:45s} n={total:4d}  max-letter-share={max_pct:.2f}%")
 
-    out_dir = os.path.join(_script_dir, '..', 'analysis')
+    out_dir = os.path.join(_script_dir, '..', 'results')
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"answer_position_bias_{args.split}.csv")
     summary_rows = []

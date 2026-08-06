@@ -6,6 +6,17 @@ Standard MMLU subject evaluation (zero-/few-shot, optional option shuffle).
 Uses utilities.LLMEvaluator so the same run works with ollama / groq / openai /
 anthropic / gemini without changing this script.
 
+Checkpointing
+-------------
+Each question is appended to the results CSV immediately (flush + fsync).
+question_id is a stable MD5 of "subject::question". Rerun the exact same
+command after a rate-limit / crash to skip already-completed IDs and continue.
+
+Output
+------
+  benchmarks/MMLU/results/
+    {provider}_{model}_{subject}_{shuffled|no_shuffle}_{N}shot_lim{L}.csv
+
 Arguments
 ---------
   --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
@@ -38,11 +49,30 @@ if _ROOT not in sys.path:
 from utilities import (  # noqa: E402
     LLMEvaluator,
     add_llm_args,
+    append_result_row,
     dataset_dir,
     extract_answer,
     format_question,
     generate_few_shot_prefix,
+    load_processed_ids,
+    make_question_id,
+    project_root,
 )
+
+FIELDNAMES = [
+    "question_id",
+    "question_no",
+    "ground_truth",
+    "predicted",
+    "correct",
+    "raw_output",
+    "provider",
+    "model",
+    "subject",
+    "shots",
+    "shuffle",
+    "limit",
+]
 
 
 def run_evaluation(
@@ -79,46 +109,97 @@ def run_evaluation(
     if limit:
         test_df = test_df.head(limit)
 
-    correct_count = 0
-    total_count = 0
+    # Stable IDs for resume; keep original row index for deterministic shuffle seeds.
+    test_df = test_df.copy()
+    test_df["question_id"] = test_df["question"].apply(
+        lambda q: make_question_id(subject, q)
+    )
+    test_df["question_no"] = range(1, len(test_df) + 1)
 
-    for idx, row in test_df.iterrows():
-        question = row["question"]
-        original_options = [str(row["A"]), str(row["B"]), str(row["C"]), str(row["D"])]
-        original_label = str(row["label"]).strip()
+    out_dir = os.path.join(project_root(__file__), "benchmarks", "MMLU", "results")
+    os.makedirs(out_dir, exist_ok=True)
+    model_slug = evaluator.model_name.replace("/", "_").replace(".", "_")
+    shuffle_tag = "shuffled" if shuffle_options else "no_shuffle"
+    lim_tag = limit if limit is not None else "all"
+    out_name = (
+        f"{evaluator.provider}_{model_slug}_{subject}_{shuffle_tag}_"
+        f"{num_shots}shot_lim{lim_tag}.csv"
+    )
+    out_path = os.path.join(out_dir, out_name)
 
-        if shuffle_options:
-            indexed_options = list(zip(["A", "B", "C", "D"], original_options))
-            random.seed(idx)
-            random.shuffle(indexed_options)
+    processed_ids = load_processed_ids(out_path)
+    remaining = test_df[~test_df["question_id"].isin(processed_ids)]
 
-            shuffled_options = [opt[1] for opt in indexed_options]
-            new_label = None
-            for new_idx, (orig_letter, _) in enumerate(indexed_options):
-                if orig_letter == original_label:
-                    new_label = ["A", "B", "C", "D"][new_idx]
-                    break
-        else:
-            shuffled_options = original_options
-            new_label = original_label
-
-        prompt = few_shot_prefix + format_question(question, shuffled_options)
-        raw_output = evaluator.query(prompt)
-        pred_label = extract_answer(raw_output)
-
-        is_correct = pred_label == new_label
-        if is_correct:
-            correct_count += 1
-        total_count += 1
-
+    print(f"Total sample: {len(test_df)} questions.")
+    if processed_ids:
         print(
-            f"Q{idx + 1}: GroundTruth={new_label} | Predicted={pred_label} | "
-            f"RawOutput='{raw_output.strip()}' | "
-            f"{'Correct' if is_correct else 'Incorrect'}"
+            f"Found existing results at {out_path} — {len(processed_ids)} already done, "
+            f"{len(remaining)} remaining. Resuming."
         )
 
+    if len(remaining) == 0:
+        print("Nothing left to evaluate — all questions already have results.")
+    else:
+        for idx, row in remaining.iterrows():
+            question = row["question"]
+            original_options = [
+                str(row["A"]),
+                str(row["B"]),
+                str(row["C"]),
+                str(row["D"]),
+            ]
+            original_label = str(row["label"]).strip()
+
+            if shuffle_options:
+                # Seed on original DataFrame index so resume keeps the same shuffle.
+                indexed_options = list(zip(["A", "B", "C", "D"], original_options))
+                random.seed(idx)
+                random.shuffle(indexed_options)
+
+                shuffled_options = [opt[1] for opt in indexed_options]
+                new_label = None
+                for new_idx, (orig_letter, _) in enumerate(indexed_options):
+                    if orig_letter == original_label:
+                        new_label = ["A", "B", "C", "D"][new_idx]
+                        break
+            else:
+                shuffled_options = original_options
+                new_label = original_label
+
+            prompt = few_shot_prefix + format_question(question, shuffled_options)
+            raw_output = evaluator.query(prompt)
+            pred_label = extract_answer(raw_output)
+            is_correct = pred_label == new_label
+
+            result_row = {
+                "question_id": row["question_id"],
+                "question_no": int(row["question_no"]),
+                "ground_truth": new_label,
+                "predicted": pred_label,
+                "correct": is_correct,
+                "raw_output": raw_output,
+                "provider": evaluator.provider,
+                "model": evaluator.model_name,
+                "subject": subject,
+                "shots": num_shots,
+                "shuffle": shuffle_options,
+                "limit": limit if limit is not None else "",
+            }
+            append_result_row(out_path, result_row, FIELDNAMES)
+
+            print(
+                f"Q{row['question_no']}: GroundTruth={new_label} | Predicted={pred_label} | "
+                f"RawOutput='{raw_output.strip()}' | "
+                f"{'Correct' if is_correct else 'Incorrect'}"
+            )
+
+    results_df = pd.read_csv(out_path)
+    results_df["correct"] = results_df["correct"].astype(bool)
+    correct_count = int(results_df["correct"].sum())
+    total_count = len(results_df)
     accuracy = (correct_count / total_count) * 100 if total_count > 0 else 0
     print(f"Accuracy: {accuracy:.2f}% ({correct_count}/{total_count})")
+    print(f"Results file (append-only, safe to resume): {out_path}")
     return accuracy
 
 
