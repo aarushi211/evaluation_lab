@@ -113,47 +113,86 @@ FIELDNAMES = [
 
 
 def introduce_typo_in_word(word: str, rng: random.Random) -> str:
-    if len(word) < 3:
+    """
+    Return a modified version of `word` that is guaranteed to differ from the original
+    whenever len(word) > 1.
+    """
+    if len(word) < 2:
         return word
 
     ops = ["substitute", "delete", "duplicate", "transpose"]
-    op = rng.choice(ops)
-    pos = rng.randint(0, len(word) - 1)
+    rng.shuffle(ops)
     lower = word.lower()
 
-    if op == "substitute" and lower[pos] in QWERTY_ADJACENCY:
-        replacement = rng.choice(QWERTY_ADJACENCY[lower[pos]])
-        return word[:pos] + replacement + word[pos + 1 :]
-    elif op == "delete":
-        return word[:pos] + word[pos + 1 :]
-    elif op == "duplicate":
-        return word[:pos] + word[pos] + word[pos:]
-    elif op == "transpose" and pos < len(word) - 1:
-        chars = list(word)
-        chars[pos], chars[pos + 1] = chars[pos + 1], chars[pos]
-        return "".join(chars)
-    return word
+    for op in ops:
+        if op == "substitute":
+            candidates = [i for i, ch in enumerate(lower) if ch in QWERTY_ADJACENCY]
+            if candidates:
+                pos = rng.choice(candidates)
+                replacement = rng.choice(QWERTY_ADJACENCY[lower[pos]])
+                mutated = word[:pos] + replacement + word[pos + 1 :]
+                if mutated != word:
+                    return mutated
+
+        elif op == "delete":
+            pos = rng.randint(0, len(word) - 1)
+            mutated = word[:pos] + word[pos + 1 :]
+            if mutated != word:
+                return mutated
+
+        elif op == "duplicate":
+            pos = rng.randint(0, len(word) - 1)
+            mutated = word[:pos] + word[pos] + word[pos:]
+            if mutated != word:
+                return mutated
+
+        elif op == "transpose" and len(word) >= 2:
+            pos = rng.randint(0, len(word) - 2)
+            chars = list(word)
+            chars[pos], chars[pos + 1] = chars[pos + 1], chars[pos]
+            mutated = "".join(chars)
+            if mutated != word:
+                return mutated
+
+    # Guaranteed fallback: delete one character.
+    pos = rng.randint(0, len(word) - 1)
+    mutated = word[:pos] + word[pos + 1 :]
+    if mutated != word:
+        return mutated
+
+    # Final fallback for pathological cases.
+    return word + "x"
 
 
 def introduce_typos(text: str, rate: float, seed: int) -> str:
     rng = random.Random(seed)
     words = text.split(" ")
+
     eligible_idx = [
         i for i, w in enumerate(words) if len(re.sub(r"[^a-zA-Z]", "", w)) >= 3
     ]
 
-    num_to_perturb = max(1, round(len(eligible_idx) * rate)) if eligible_idx else 0
-    chosen = (
-        rng.sample(eligible_idx, k=min(num_to_perturb, len(eligible_idx)))
-        if eligible_idx
-        else []
-    )
+    if not eligible_idx:
+        return text
 
+    num_to_perturb = max(1, round(len(eligible_idx) * rate))
+    num_to_perturb = min(num_to_perturb, len(eligible_idx))
+
+    chosen = rng.sample(eligible_idx, k=num_to_perturb)
+
+    original_text = text
     for i in chosen:
         words[i] = introduce_typo_in_word(words[i], rng)
 
-    return " ".join(words)
+    typo_text = " ".join(words)
 
+    # Safety net: if somehow nothing changed, force one guaranteed edit.
+    if typo_text == original_text:
+        i = rng.choice(eligible_idx)
+        words[i] = words[i][:-1] if len(words[i]) > 1 else words[i] + "x"
+        typo_text = " ".join(words)
+
+    return typo_text
 
 def mcnemar_test(b: int, c: int):
     """
