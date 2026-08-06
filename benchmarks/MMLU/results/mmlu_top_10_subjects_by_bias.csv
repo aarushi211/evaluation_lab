@@ -1,0 +1,11 @@
+subject,category,total_questions,longest_option_bias,negation_questions,negation_percentage
+global_facts,Other (Applied/Professional),100,72.0,2,2.0
+elementary_mathematics,STEM,378,64.02116402116403,6,1.5873015873015872
+high_school_mathematics,STEM,270,62.96296296296296,16,5.9259259259259265
+college_chemistry,STEM,100,61.0,4,4.0
+college_physics,STEM,102,60.78431372549019,4,3.9215686274509802
+formal_logic,STEM,126,60.317460317460316,17,13.492063492063492
+international_law,Humanities,121,55.371900826446286,7,5.785123966942149
+college_mathematics,Other (Applied/Professional),100,51.0,10,10.0
+medical_genetics,STEM,100,48.0,10,10.0
+high_school_statistics,STEM,216,46.75925925925926,26,12.037037037037036

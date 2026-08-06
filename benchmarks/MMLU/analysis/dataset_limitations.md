@@ -37,7 +37,7 @@ Ideally, validation and test splits should have zero overlap to ensure evaluatio
 
 ## 3. Formatting & Data Quality Issues
 
-### Missing Options (NaNs)
+### Missing Options (NaNs) [Option is None AKA None of the above that it caught as missing option]
 MMLU is standardly treated as a 4-choice benchmark (A, B, C, D). However, several questions contain missing options (representing 3-choice questions or missing data fields):
 - **Test Set**: 10 questions have missing options.
 - **Val Set**: 2 questions have missing options.

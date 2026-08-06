@@ -1,0 +1,11 @@
+subject,category,total_questions,longest_option_bias,negation_questions,negation_percentage
+public_relations,Other (Applied/Professional),110,20.0,14,12.727272727272727
+econometrics,Social Sciences,114,22.807017543859647,19,16.666666666666664
+human_aging,Other (Applied/Professional),223,23.766816143497756,15,6.726457399103139
+conceptual_physics,STEM,235,23.829787234042556,3,1.276595744680851
+anatomy,Other (Applied/Professional),135,25.185185185185183,3,2.2222222222222223
+virology,STEM,166,25.301204819277107,5,3.0120481927710845
+high_school_psychology,Social Sciences,545,26.422018348623855,22,4.036697247706423
+high_school_us_history,Humanities,204,26.47058823529412,122,59.80392156862745
+moral_scenarios,Humanities,895,27.262569832402235,895,100.0
+prehistory,Humanities,324,27.77777777777778,16,4.938271604938271

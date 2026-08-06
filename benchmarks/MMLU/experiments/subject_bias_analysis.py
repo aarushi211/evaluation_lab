@@ -7,7 +7,7 @@ import numpy as np
 CATEGORIES = {
     'STEM': [
         'abstract_algebra', 'astronomy', 'college_biology', 'college_chemistry',
-        'college_computer_science', 'college_mathematics', 'college_physics',
+        'college_computer_science', 'college_mhematics', 'college_physics',
         'computer_security', 'conceptual_physics', 'electrical_engineering',
         'elementary_mathematics', 'formal_logic', 'high_school_biology',
         'high_school_chemistry', 'high_school_computer_science',
@@ -42,7 +42,7 @@ def get_category(subject):
 def analyze_subject_biases(base_dir):
     test_path = os.path.join(base_dir, 'test')
     csv_files = glob.glob(os.path.join(test_path, "*.csv"))
-    
+
     all_rows = []
     for f in csv_files:
         subject = os.path.basename(f).replace("_test.csv", "")
@@ -52,15 +52,19 @@ def analyze_subject_biases(base_dir):
             df['category'] = get_category(subject)
             all_rows.append(df)
         except Exception as e:
-            pass
-            
+            print(f"Error reading {f}: {e}")
+
+    if not all_rows:
+        print("No CSV files were loaded successfully.")
+        return
+
     df_all = pd.concat(all_rows, ignore_index=True)
     df_all['label'] = df_all['label'].astype(str).str.strip()
-    
-    # Calculate Option Lengths
+
+    # Calculate option lengths
     for col in ['A', 'B', 'C', 'D']:
         df_all[f'{col}_len'] = df_all[col].astype(str).str.len()
-        
+
     def is_correct_longest(row):
         lbl = row['label']
         if lbl not in ['A', 'B', 'C', 'D']:
@@ -68,43 +72,66 @@ def analyze_subject_biases(base_dir):
         lengths = {c: row[f'{c}_len'] for c in ['A', 'B', 'C', 'D']}
         max_len = max(lengths.values())
         return 1 if lengths[lbl] == max_len else 0
-        
+
     df_all['correct_longest'] = df_all.apply(is_correct_longest, axis=1)
-    
-    print("=== ANALYSIS BY HIGH-LEVEL CATEGORY ===")
-    cat_summary = df_all.groupby('category').agg(
-        total_questions=('question', 'count'),
-        longest_option_bias=('correct_longest', lambda x: x.mean() * 100)
-    ).reset_index()
-    print(cat_summary.to_string(index=False))
-    
-    print("\n=== TOP 10 SUBJECTS WITH HIGHEST OPTION LENGTH BIAS ===")
-    sub_summary = df_all.groupby(['subject', 'category']).agg(
-        total_questions=('question', 'count'),
-        longest_option_bias=('correct_longest', lambda x: x.mean() * 100)
-    ).reset_index()
-    
-    top_bias = sub_summary.sort_values(by='longest_option_bias', ascending=False).head(10)
-    print(top_bias.to_string(index=False))
-    
-    print("\n=== TOP 10 SUBJECTS WITH LOWEST OPTION LENGTH BIAS ===")
-    low_bias = sub_summary.sort_values(by='longest_option_bias', ascending=True).head(10)
-    print(low_bias.to_string(index=False))
 
     # Negation analysis
     negation_words = [' not ', ' except ', ' incorrect', ' false', ' wrong', ' truth value']
+
     def contains_negation(q):
         q_str = str(q).lower()
         return any(word in q_str for word in negation_words)
-        
+
     df_all['has_negation'] = df_all['question'].apply(contains_negation)
+
+    # Summaries
+    cat_summary = df_all.groupby('category').agg(
+        total_questions=('question', 'count'),
+        longest_option_bias=('correct_longest', lambda x: x.mean() * 100),
+        negation_questions=('has_negation', 'sum'),
+        negation_percentage=('has_negation', lambda x: x.mean() * 100)
+    ).reset_index()
+
+    sub_summary = df_all.groupby(['subject', 'category']).agg(
+        total_questions=('question', 'count'),
+        longest_option_bias=('correct_longest', lambda x: x.mean() * 100),
+        negation_questions=('has_negation', 'sum'),
+        negation_percentage=('has_negation', lambda x: x.mean() * 100)
+    ).reset_index()
+
+    top_bias = sub_summary.sort_values(by='longest_option_bias', ascending=False).head(10)
+    low_bias = sub_summary.sort_values(by='longest_option_bias', ascending=True).head(10)
     neg_summary = df_all.groupby('category').agg(
         total_questions=('question', 'count'),
         negation_questions=('has_negation', 'sum'),
         negation_percentage=('has_negation', lambda x: x.mean() * 100)
     ).reset_index()
+
+    # Print summaries
+    print("=== ANALYSIS BY HIGH-LEVEL CATEGORY ===")
+    print(cat_summary.to_string(index=False))
+
+    print("\n=== TOP 10 SUBJECTS WITH HIGHEST OPTION LENGTH BIAS ===")
+    print(top_bias.to_string(index=False))
+
+    print("\n=== TOP 10 SUBJECTS WITH LOWEST OPTION LENGTH BIAS ===")
+    print(low_bias.to_string(index=False))
+
     print("\n=== NEGATIVE/EXCEPT QUESTIONS BY CATEGORY ===")
     print(neg_summary.to_string(index=False))
+
+    # Save results
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    results_dir = os.path.abspath(os.path.join(script_dir, '..', 'results'))
+    os.makedirs(results_dir, exist_ok=True)
+
+    cat_summary.to_csv(os.path.join(results_dir, 'mmlu_category_summary.csv'), index=False)
+    sub_summary.to_csv(os.path.join(results_dir, 'mmlu_subject_bias_summary.csv'), index=False)
+    top_bias.to_csv(os.path.join(results_dir, 'mmlu_top_10_subjects_by_bias.csv'), index=False)
+    low_bias.to_csv(os.path.join(results_dir, 'mmlu_bottom_10_subjects_by_bias.csv'), index=False)
+    neg_summary.to_csv(os.path.join(results_dir, 'mmlu_negation_summary.csv'), index=False)
+
+    print(f"\nSaved CSV files to: {results_dir}")
 
 if __name__ == '__main__':
     _script_dir = os.path.dirname(os.path.abspath(__file__))

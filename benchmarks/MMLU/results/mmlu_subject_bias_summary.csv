@@ -1,0 +1,58 @@
+subject,category,total_questions,longest_option_bias,negation_questions,negation_percentage
+abstract_algebra,STEM,100,38.0,3,3.0
+anatomy,Other (Applied/Professional),135,25.185185185185183,3,2.2222222222222223
+astronomy,STEM,152,45.39473684210527,18,11.842105263157894
+business_ethics,Humanities,100,35.0,5,5.0
+clinical_knowledge,Other (Applied/Professional),265,42.64150943396226,23,8.679245283018867
+college_biology,STEM,144,29.166666666666668,6,4.166666666666666
+college_chemistry,STEM,100,61.0,4,4.0
+college_computer_science,STEM,100,37.0,21,21.0
+college_mathematics,Other (Applied/Professional),100,51.0,10,10.0
+college_medicine,Other (Applied/Professional),173,35.26011560693642,19,10.982658959537572
+college_physics,STEM,102,60.78431372549019,4,3.9215686274509802
+computer_security,STEM,100,40.0,14,14.000000000000002
+conceptual_physics,STEM,235,23.829787234042556,3,1.276595744680851
+econometrics,Social Sciences,114,22.807017543859647,19,16.666666666666664
+electrical_engineering,STEM,145,42.06896551724138,2,1.3793103448275863
+elementary_mathematics,STEM,378,64.02116402116403,6,1.5873015873015872
+formal_logic,STEM,126,60.317460317460316,17,13.492063492063492
+global_facts,Other (Applied/Professional),100,72.0,2,2.0
+high_school_biology,STEM,310,36.12903225806451,30,9.67741935483871
+high_school_chemistry,STEM,203,45.812807881773395,11,5.41871921182266
+high_school_computer_science,STEM,100,42.0,11,11.0
+high_school_european_history,Humanities,165,34.54545454545455,96,58.18181818181818
+high_school_geography,Social Sciences,198,36.36363636363637,34,17.17171717171717
+high_school_government_and_politics,Social Sciences,193,27.979274611398964,12,6.217616580310881
+high_school_macroeconomics,Social Sciences,390,39.23076923076923,16,4.102564102564102
+high_school_mathematics,STEM,270,62.96296296296296,16,5.9259259259259265
+high_school_microeconomics,Social Sciences,238,39.91596638655462,18,7.563025210084033
+high_school_physics,STEM,151,41.05960264900662,13,8.609271523178808
+high_school_psychology,Social Sciences,545,26.422018348623855,22,4.036697247706423
+high_school_statistics,STEM,216,46.75925925925926,26,12.037037037037036
+high_school_us_history,Humanities,204,26.47058823529412,122,59.80392156862745
+high_school_world_history,Humanities,237,32.06751054852321,159,67.08860759493672
+human_aging,Other (Applied/Professional),223,23.766816143497756,15,6.726457399103139
+human_sexuality,Social Sciences,131,33.587786259541986,5,3.816793893129771
+international_law,Humanities,121,55.371900826446286,7,5.785123966942149
+jurisprudence,Humanities,108,45.370370370370374,3,2.7777777777777777
+logical_fallacies,Humanities,163,36.19631901840491,10,6.134969325153374
+machine_learning,STEM,112,32.142857142857146,16,14.285714285714285
+management,Other (Applied/Professional),103,31.06796116504854,23,22.330097087378643
+marketing,Other (Applied/Professional),234,38.46153846153847,25,10.683760683760683
+medical_genetics,STEM,100,48.0,10,10.0
+miscellaneous,Other (Applied/Professional),783,32.18390804597701,63,8.045977011494253
+moral_disputes,Humanities,346,32.369942196531795,46,13.294797687861271
+moral_scenarios,Humanities,895,27.262569832402235,895,100.0
+nutrition,Other (Applied/Professional),306,44.771241830065364,31,10.130718954248366
+philosophy,Humanities,311,33.762057877813504,25,8.038585209003216
+prehistory,Humanities,324,27.77777777777778,16,4.938271604938271
+professional_accounting,Other (Applied/Professional),282,42.5531914893617,35,12.411347517730496
+professional_law,Other (Applied/Professional),1534,29.66101694915254,644,41.98174706649283
+professional_medicine,Other (Applied/Professional),272,31.985294117647058,80,29.411764705882355
+professional_psychology,Social Sciences,612,27.941176470588236,54,8.823529411764707
+public_relations,Other (Applied/Professional),110,20.0,14,12.727272727272727
+security_studies,Other (Applied/Professional),245,35.10204081632653,35,14.285714285714285
+sociology,Social Sciences,201,35.32338308457712,19,9.45273631840796
+us_foreign_policy,Social Sciences,100,36.0,5,5.0
+virology,STEM,166,25.301204819277107,5,3.0120481927710845
+world_religions,Humanities,171,42.69005847953216,2,1.1695906432748537
