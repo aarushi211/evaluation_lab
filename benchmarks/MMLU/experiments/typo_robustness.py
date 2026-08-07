@@ -40,11 +40,12 @@ Arguments
   --seed       Sampling / typo RNG seed                   (default: 42)
   --data_dir   Folder containing test/ — Colab-friendly
                (default: <repo>/datasets/MMLU/data/data)
+  --workers    Concurrent API threads (default: 1; try 4–8 for cloud APIs)
 
 Example
 -------
   python typo_robustness.py --provider gemini --model gemini-2.0-flash \\
-      --subjects all --limit 100 --typo_rate 0.15 --json
+      --subjects all --limit 100 --typo_rate 0.15 --json --workers 8
 
   python typo_robustness.py --data_dir /content/data --limit 50
 """
@@ -66,6 +67,7 @@ from utilities import (  # noqa: E402
     LLMEvaluator,
     add_data_dir_arg,
     add_llm_args,
+    add_workers_arg,
     append_result_row,
     extract_answer,
     format_question,
@@ -73,6 +75,7 @@ from utilities import (  # noqa: E402
     make_question_id,
     project_root,
     resolve_data_dir,
+    run_parallel,
 )
 
 QWERTY_ADJACENCY = {
@@ -295,7 +298,10 @@ def run(args):
             use_json=args.json,
         )
 
-        for _, row in remaining.iterrows():
+        work_items = list(remaining.iterrows())
+
+        def process_one(item):
+            _, row = item
             options = [str(row["A"]), str(row["B"]), str(row["C"]), str(row["D"])]
             gt = row["label"]
 
@@ -321,12 +327,15 @@ def run(args):
                 "typo_correct": typo_correct,
             }
             append_result_row(out_path, result_row, FIELDNAMES)
-
             print(
                 f"[{row['subject']}] GT={gt} | "
                 f"Orig={orig_pred} ({'OK' if orig_correct else 'X'}) | "
                 f"Typo={typo_pred} ({'OK' if typo_correct else 'X'})"
             )
+            return result_row
+
+        print(f"Running with {max(1, int(args.workers))} worker(s)...")
+        run_parallel(process_one, work_items, workers=args.workers)
 
     results_df = pd.read_csv(out_path)
     results_df["orig_correct"] = results_df["orig_correct"].astype(bool)
@@ -364,6 +373,7 @@ if __name__ == "__main__":
     )
     add_llm_args(parser)
     add_data_dir_arg(parser)
+    add_workers_arg(parser)
     parser.add_argument(
         "--subjects",
         type=str,

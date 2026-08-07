@@ -30,11 +30,12 @@ Arguments
   --limit      Max test questions to evaluate             (default: 10)
   --data_dir   Folder containing test/ (and optionally dev/) — Colab-friendly
                (default: <repo>/datasets/MMLU/data/data)
+  --workers    Concurrent API threads (default: 1; try 4–8 for cloud APIs)
 
 Example
 -------
   python evaluate_mmlu.py --provider openai --model gpt-4o-mini \\
-      --subject global_facts --shots 5 --limit 100 --json
+      --subject global_facts --shots 5 --limit 100 --json --workers 8
 
   # Colab / custom layout:
   python evaluate_mmlu.py --data_dir /content/data --subject anatomy --limit 10
@@ -55,6 +56,7 @@ from utilities import (  # noqa: E402
     LLMEvaluator,
     add_data_dir_arg,
     add_llm_args,
+    add_workers_arg,
     append_result_row,
     extract_answer,
     format_question,
@@ -63,6 +65,7 @@ from utilities import (  # noqa: E402
     make_question_id,
     project_root,
     resolve_data_dir,
+    run_parallel,
 )
 
 FIELDNAMES = [
@@ -88,10 +91,11 @@ def run_evaluation(
     num_shots: int = 0,
     shuffle_options: bool = False,
     limit: int = None,
+    workers: int = 1,
 ):
     print(
         f"\n--- Evaluating Subject: {subject} "
-        f"(Shuffled Options: {shuffle_options}, Shots: {num_shots}) ---"
+        f"(Shuffled Options: {shuffle_options}, Shots: {num_shots}, Workers: {workers}) ---"
     )
 
     test_file = os.path.join(data_dir, "test", f"{subject}_test.csv")
@@ -146,7 +150,10 @@ def run_evaluation(
     if len(remaining) == 0:
         print("Nothing left to evaluate — all questions already have results.")
     else:
-        for idx, row in remaining.iterrows():
+        work_items = list(remaining.iterrows())
+
+        def process_one(item):
+            idx, row = item
             question = row["question"]
             original_options = [
                 str(row["A"]),
@@ -157,7 +164,6 @@ def run_evaluation(
             original_label = str(row["label"]).strip()
 
             if shuffle_options:
-                # Seed on original DataFrame index so resume keeps the same shuffle.
                 indexed_options = list(zip(["A", "B", "C", "D"], original_options))
                 random.seed(idx)
                 random.shuffle(indexed_options)
@@ -192,12 +198,15 @@ def run_evaluation(
                 "limit": limit if limit is not None else "",
             }
             append_result_row(out_path, result_row, FIELDNAMES)
-
             print(
                 f"Q{row['question_no']}: GroundTruth={new_label} | Predicted={pred_label} | "
                 f"RawOutput='{raw_output.strip()}' | "
                 f"{'Correct' if is_correct else 'Incorrect'}"
             )
+            return result_row
+
+        print(f"Running with {max(1, int(workers))} worker(s)...")
+        run_parallel(process_one, work_items, workers=workers)
 
     results_df = pd.read_csv(out_path)
     results_df["correct"] = results_df["correct"].astype(bool)
@@ -215,6 +224,7 @@ if __name__ == "__main__":
     )
     add_llm_args(parser)
     add_data_dir_arg(parser)
+    add_workers_arg(parser)
     parser.add_argument("--subject", type=str, default="anatomy", help="MMLU subject to run")
     parser.add_argument("--shots", type=int, default=0, help="Number of few-shot examples")
     parser.add_argument(
@@ -244,6 +254,7 @@ if __name__ == "__main__":
             num_shots=args.shots,
             shuffle_options=args.shuffle,
             limit=args.limit,
+            workers=args.workers,
         )
     except Exception as e:
         print(f"Initialization/Execution error: {e}")

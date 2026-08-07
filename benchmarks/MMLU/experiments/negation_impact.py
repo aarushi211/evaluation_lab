@@ -44,11 +44,12 @@ Arguments
   --seed             Sampling RNG seed                          (default: 42)
   --data_dir         Folder containing test/ — Colab-friendly
                      (default: <repo>/datasets/MMLU/data/data)
+  --workers          Concurrent API threads (default: 1; try 4–8 for cloud APIs)
 
 Example
 -------
   python negation_impact.py --provider anthropic --model claude-3-5-haiku-latest \\
-      --subjects all --limit_per_group 20 --min_per_group 10 --json
+      --subjects all --limit_per_group 20 --min_per_group 10 --json --workers 8
 
   python negation_impact.py --data_dir /content/data --limit_per_group 10
 """
@@ -69,6 +70,7 @@ from utilities import (  # noqa: E402
     LLMEvaluator,
     add_data_dir_arg,
     add_llm_args,
+    add_workers_arg,
     append_result_row,
     extract_answer,
     format_question,
@@ -76,6 +78,7 @@ from utilities import (  # noqa: E402
     make_question_id,
     project_root,
     resolve_data_dir,
+    run_parallel,
 )
 from subject_bias_analysis import get_category  # noqa: E402
 
@@ -241,7 +244,10 @@ def run(args):
             use_json=args.json,
         )
 
-        for _, row in remaining.iterrows():
+        work_items = list(remaining.iterrows())
+
+        def process_one(item):
+            _, row = item
             options = [str(row["A"]), str(row["B"]), str(row["C"]), str(row["D"])]
             prompt = format_question(row["question"], options)
             raw_output = evaluator.query(prompt)
@@ -262,7 +268,6 @@ def run(args):
                 "correct": is_correct,
             }
             append_result_row(out_path, result_row, FIELDNAMES)
-
             print(
                 f"[{row['subject']}|{row['subject_category']}] "
                 f"negation={row['has_negation']} type={row['negation_type']} "
@@ -270,6 +275,10 @@ def run(args):
                 f"GT={row['label']} | Pred={pred_label} | "
                 f"{'Correct' if is_correct else 'Incorrect'}"
             )
+            return result_row
+
+        print(f"Running with {max(1, int(args.workers))} worker(s)...")
+        run_parallel(process_one, work_items, workers=args.workers)
 
     results_df = pd.read_csv(out_path)
     results_df["has_negation"] = results_df["has_negation"].astype(bool)
@@ -338,6 +347,7 @@ if __name__ == "__main__":
     )
     add_llm_args(parser)
     add_data_dir_arg(parser)
+    add_workers_arg(parser)
     parser.add_argument(
         "--subjects",
         type=str,

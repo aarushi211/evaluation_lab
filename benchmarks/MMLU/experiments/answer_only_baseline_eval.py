@@ -15,6 +15,12 @@ Checkpointing
 Each result is appended to the output CSV immediately. Rerunning the exact
 same command auto-resumes by skipping already-completed question_ids.
 
+CSV columns (extras)
+--------------------
+  option_lengths      Character lengths of A–D as "A:n|B:n|C:n|D:n"
+  longest_option      Letter(s) with max length (pipe-joined on ties, e.g. "B|C")
+  correct_is_longest  True if ground-truth letter is among the longest option(s)
+
 Arguments
 ---------
   --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
@@ -27,11 +33,12 @@ Arguments
   --seed       Sampling RNG seed                          (default: 42)
   --data_dir   Folder containing test/ — Colab-friendly
                (default: <repo>/datasets/MMLU/data/data)
+  --workers    Concurrent API threads (default: 1; try 4–8 for cloud APIs)
 
 Example
 -------
   python answer_only_baseline_eval.py --provider groq --model llama-3.1-8b-instant \\
-      --subjects all --limit 200 --json
+      --subjects all --limit 200 --json --workers 8
 
   python answer_only_baseline_eval.py --data_dir /content/data --limit 50
 """
@@ -51,18 +58,23 @@ from utilities import (  # noqa: E402
     LLMEvaluator,
     add_data_dir_arg,
     add_llm_args,
+    add_workers_arg,
     append_result_row,
     extract_answer,
     load_processed_ids,
     make_question_id,
     project_root,
     resolve_data_dir,
+    run_parallel,
 )
 
 FIELDNAMES = [
     "question_id",
     "subject",
     "options_only_prompt",
+    "option_lengths",
+    "longest_option",
+    "correct_is_longest",
     "ground_truth",
     "predicted",
     "raw_output",
@@ -77,9 +89,40 @@ def format_options_only(options):
     prompt += f"C. {options[2]}\n"
     prompt += f"D. {options[3]}\n"
     prompt += (
-        "Without seeing the question, which option is most likely to be correct? Answer:"
+        """
+        The original question is unavailable.
+
+        Below are the four answer options.
+
+        Choose the option that is most likely to be correct.
+
+        Respond with only A, B, C or D.
+        """
     )
     return prompt
+
+
+def option_length_features(options, correct_label: str):
+    """
+    Compute length-bias features for the four options.
+
+    Returns
+    -------
+    option_lengths : str
+        e.g. "A:12|B:45|C:8|D:30"
+    longest_option : str
+        Letter(s) with max character length; pipe-joined on ties
+    correct_is_longest : bool
+        Whether the ground-truth label is among the longest option(s)
+    """
+    labels = ["A", "B", "C", "D"]
+    lengths = [len(str(opt)) for opt in options]
+    max_len = max(lengths) if lengths else 0
+    longest = [lab for lab, n in zip(labels, lengths) if n == max_len]
+    option_lengths = "|".join(f"{lab}:{n}" for lab, n in zip(labels, lengths))
+    longest_option = "|".join(longest)
+    correct_is_longest = str(correct_label).strip().upper() in longest
+    return option_lengths, longest_option, correct_is_longest
 
 
 def build_sample(data_dir: str, subjects, total_limit: int, seed: int) -> pd.DataFrame:
@@ -172,8 +215,14 @@ def run(args):
             use_json=args.json,
         )
 
-        for _, row in remaining.iterrows():
+        work_items = list(remaining.iterrows())
+
+        def process_one(item):
+            _, row = item
             options = [str(row["A"]), str(row["B"]), str(row["C"]), str(row["D"])]
+            option_lengths, longest_option, correct_is_longest = option_length_features(
+                options, row["label"]
+            )
             prompt = format_options_only(options)
             raw_output = evaluator.query(prompt)
             pred_label = extract_answer(raw_output)
@@ -183,17 +232,24 @@ def run(args):
                 "question_id": row["question_id"],
                 "subject": row["subject"],
                 "options_only_prompt": prompt.replace("\n", " | "),
+                "option_lengths": option_lengths,
+                "longest_option": longest_option,
+                "correct_is_longest": correct_is_longest,
                 "ground_truth": row["label"],
                 "predicted": pred_label,
                 "raw_output": raw_output,
                 "correct": is_correct,
             }
             append_result_row(out_path, result_row, FIELDNAMES)
-
             print(
                 f"[{row['subject']}] GT={row['label']} | Pred={pred_label} | "
+                f"longest={longest_option} correct_is_longest={correct_is_longest} | "
                 f"{'Correct' if is_correct else 'Incorrect'}"
             )
+            return result_row
+
+        print(f"Running with {max(1, int(args.workers))} worker(s)...")
+        run_parallel(process_one, work_items, workers=args.workers)
 
     results_df = pd.read_csv(out_path)
     results_df["correct"] = results_df["correct"].astype(bool)
@@ -213,6 +269,24 @@ def run(args):
             f"({'SIGNIFICANTLY above/below chance' if p_value < 0.05 else 'not significantly different from chance'})"
         )
 
+    if "correct_is_longest" in results_df.columns:
+        results_df["correct_is_longest"] = results_df["correct_is_longest"].astype(bool)
+        longest_rate = results_df["correct_is_longest"].mean() * 100
+        print(
+            f"Ground truth is longest option: {longest_rate:.2f}% of questions "
+            f"({results_df['correct_is_longest'].sum()}/{total})"
+        )
+        # Did the model pick the longest option more often than chance?
+        pred_is_longest = results_df.apply(
+            lambda r: str(r["predicted"]) in str(r["longest_option"]).split("|"),
+            axis=1,
+        )
+        pick_longest_rate = pred_is_longest.mean() * 100
+        print(
+            f"Model predicted a longest option: {pick_longest_rate:.2f}% "
+            f"({pred_is_longest.sum()}/{total})"
+        )
+
     print("\n=== PER-SUBJECT BREAKDOWN ===")
     subj_summary = (
         results_df.groupby("subject")["correct"].agg(["mean", "count"]).reset_index()
@@ -230,6 +304,7 @@ if __name__ == "__main__":
     )
     add_llm_args(parser)
     add_data_dir_arg(parser)
+    add_workers_arg(parser)
     parser.add_argument(
         "--subjects",
         type=str,
