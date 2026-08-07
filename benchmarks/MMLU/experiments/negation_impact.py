@@ -24,6 +24,13 @@ Checkpointing
 Every question's result is appended to the output CSV immediately. Rerun the
 exact same command to resume from already-completed question_ids.
 
+CSV columns (extras)
+--------------------
+  negation_type      NOT / EXCEPT / FALSE / INCORRECT / WRONG (pipe-joined if
+                     several appear); NONE when has_negation is False
+  question_length    Character length of the question stem
+  subject_category   STEM / Humanities / Social Sciences / Other (Applied/Professional)
+
 Arguments
 ---------
   --provider         {ollama, groq, openai, anthropic, gemini}  (default: ollama)
@@ -48,6 +55,7 @@ Example
 
 import os
 import sys
+import re
 import glob
 import argparse
 import math
@@ -69,19 +77,40 @@ from utilities import (  # noqa: E402
     project_root,
     resolve_data_dir,
 )
+from subject_bias_analysis import get_category  # noqa: E402
 
 NEGATION_PATTERN = r"\b(?:not|except|false|incorrect|wrong)\b"
 
 FIELDNAMES = [
     "question_id",
     "subject",
+    "subject_category",
     "has_negation",
+    "negation_type",
+    "question_length",
     "question",
     "ground_truth",
     "predicted",
     "raw_output",
     "correct",
 ]
+
+
+def classify_negation(question: str):
+    """
+    Return (has_negation, negation_type).
+
+    negation_type is the uppercase cue word(s) found in order of appearance
+    (e.g. "NOT", "EXCEPT|WRONG"), or "NONE" when no cue is present.
+    """
+    found = []
+    for match in re.finditer(NEGATION_PATTERN, str(question).lower()):
+        token = match.group(0).upper()
+        if token not in found:
+            found.append(token)
+    if not found:
+        return False, "NONE"
+    return True, "|".join(found)
 
 
 def load_subject_df(data_dir: str, subject: str) -> pd.DataFrame:
@@ -92,10 +121,12 @@ def load_subject_df(data_dir: str, subject: str) -> pd.DataFrame:
         test_file, header=None, names=["question", "A", "B", "C", "D", "label"]
     )
     df["subject"] = subject
+    df["subject_category"] = get_category(subject)
     df["label"] = df["label"].astype(str).str.strip()
-    df["has_negation"] = (
-        df["question"].astype(str).str.lower().str.contains(NEGATION_PATTERN, regex=True)
-    )
+    classified = df["question"].astype(str).map(classify_negation)
+    df["has_negation"] = classified.map(lambda x: x[0])
+    df["negation_type"] = classified.map(lambda x: x[1])
+    df["question_length"] = df["question"].astype(str).str.len()
     return df
 
 
@@ -161,6 +192,9 @@ def run(args):
             os.path.basename(f).replace("_test.csv", "")
             for f in glob.glob(os.path.join(test_dir, "*.csv"))
         )
+        print("test_dir:", test_dir)
+        print("test csv count:", len(glob.glob(os.path.join(test_dir, "*.csv"))))
+        print("first 5 subjects:", subjects[:5])
     else:
         subjects = [s.strip() for s in args.subjects.split(",") if s.strip()]
 
@@ -217,7 +251,10 @@ def run(args):
             result_row = {
                 "question_id": row["question_id"],
                 "subject": row["subject"],
+                "subject_category": row["subject_category"],
                 "has_negation": row["has_negation"],
+                "negation_type": row["negation_type"],
+                "question_length": int(row["question_length"]),
                 "question": row["question"],
                 "ground_truth": row["label"],
                 "predicted": pred_label,
@@ -227,7 +264,9 @@ def run(args):
             append_result_row(out_path, result_row, FIELDNAMES)
 
             print(
-                f"[{row['subject']}] negation={row['has_negation']} | "
+                f"[{row['subject']}|{row['subject_category']}] "
+                f"negation={row['has_negation']} type={row['negation_type']} "
+                f"len={int(row['question_length'])} | "
                 f"GT={row['label']} | Pred={pred_label} | "
                 f"{'Correct' if is_correct else 'Incorrect'}"
             )
@@ -269,6 +308,26 @@ def run(args):
     )
     subject_summary["mean"] = (subject_summary["mean"] * 100).round(2)
     print(subject_summary.to_string(index=False))
+
+    if "negation_type" in results_df.columns:
+        print("\n=== BY NEGATION TYPE ===")
+        type_summary = (
+            results_df.groupby("negation_type")["correct"]
+            .agg(["mean", "count"])
+            .reset_index()
+        )
+        type_summary["mean"] = (type_summary["mean"] * 100).round(2)
+        print(type_summary.to_string(index=False))
+
+    if "subject_category" in results_df.columns:
+        print("\n=== BY SUBJECT CATEGORY ===")
+        cat_summary = (
+            results_df.groupby(["subject_category", "has_negation"])["correct"]
+            .agg(["mean", "count"])
+            .reset_index()
+        )
+        cat_summary["mean"] = (cat_summary["mean"] * 100).round(2)
+        print(cat_summary.to_string(index=False))
 
     print(f"\nResults file (append-only, safe to resume): {out_path}")
 
