@@ -17,8 +17,13 @@ add_data_dir_arg(parser) registers:
                dev/, val/). Default: <repo>/datasets/MMLU/data/data
                Useful in Colab / notebooks where the data lives elsewhere.
 
-Scripts typically call add_llm_args(parser) / add_data_dir_arg(parser) then
-add their own flags.
+add_workers_arg(parser) registers:
+
+  --workers    Concurrent API request threads (default: 1). Speeds up cloud
+               providers; start with 4–8 and lower if you hit rate limits.
+
+Scripts typically call add_llm_args(parser) / add_data_dir_arg(parser) /
+add_workers_arg(parser) then add their own flags.
 """
 
 from __future__ import annotations
@@ -71,6 +76,25 @@ def add_data_dir_arg(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
             "dev/, val/). Defaults to <repo>/datasets/MMLU/data/data. "
             "Pass this explicitly in Colab, e.g. "
             "--data_dir /content/data"
+        ),
+    )
+    return parser
+
+
+def add_workers_arg(
+    parser: argparse.ArgumentParser,
+    *,
+    default: int = 1,
+) -> argparse.ArgumentParser:
+    """Add --workers for concurrent API request threads."""
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=default,
+        help=(
+            "Number of concurrent API request threads (default: 1). "
+            "Useful for cloud providers (openai/groq/…); start with 4–8. "
+            "Lower if you see many 429 rate limits. Little benefit for ollama."
         ),
     )
     return parser

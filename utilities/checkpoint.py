@@ -20,7 +20,11 @@ from __future__ import annotations
 import csv
 import hashlib
 import os
+import threading
 from typing import Dict, Iterable, Optional, Set
+
+# Serialize appends so --workers > 1 cannot interleave CSV rows/headers.
+_CSV_LOCK = threading.Lock()
 
 
 def make_question_id(subject: str, question: str) -> str:
@@ -50,14 +54,16 @@ def append_result_row(
     """
     Append one result row to a CSV, creating the header on first write.
     Flushes + fsyncs so an interrupted run does not lose the last row.
+    Thread-safe for concurrent workers.
     """
     keys = list(fieldnames) if fieldnames is not None else list(row.keys())
-    file_exists = os.path.exists(out_path)
-    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-    with open(out_path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=keys)
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(row)
-        f.flush()
-        os.fsync(f.fileno())
+    with _CSV_LOCK:
+        file_exists = os.path.exists(out_path)
+        os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+        with open(out_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=keys)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(row)
+            f.flush()
+            os.fsync(f.fileno())

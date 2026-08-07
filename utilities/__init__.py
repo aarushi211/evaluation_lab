@@ -12,7 +12,8 @@ Public exports
   LLMEvaluator, SUPPORTED_PROVIDERS
   format_question, generate_few_shot_prefix, extract_answer
   make_question_id, load_processed_ids, append_result_row
-  add_llm_args, add_data_dir_arg
+  add_llm_args, add_data_dir_arg, add_workers_arg
+  run_parallel
 
 Shared CLI flags
 ----------------
@@ -21,6 +22,7 @@ Shared CLI flags
   --api_key    API key; comma-separated for rotation      (optional; else env)
   --json       Request JSON-shaped A/B/C/D answers        (flag)
   --data_dir   Path to folder containing test/ (dev/, val/); Colab-friendly
+  --workers    Concurrent API threads (default: 1; try 4–8 for cloud APIs)
 """
 
 from utilities.env import load_dotenv
@@ -33,7 +35,8 @@ from utilities.paths import (
 from utilities.llm import LLMEvaluator, SUPPORTED_PROVIDERS
 from utilities.mcq import format_question, generate_few_shot_prefix, extract_answer
 from utilities.checkpoint import make_question_id, load_processed_ids, append_result_row
-from utilities.cli import add_llm_args, add_data_dir_arg
+from utilities.cli import add_llm_args, add_data_dir_arg, add_workers_arg
+from utilities.parallel import run_parallel
 
 __all__ = [
     "load_dotenv",
@@ -51,4 +54,6 @@ __all__ = [
     "append_result_row",
     "add_llm_args",
     "add_data_dir_arg",
+    "add_workers_arg",
+    "run_parallel",
 ]
