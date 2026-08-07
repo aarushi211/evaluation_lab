@@ -15,11 +15,17 @@ Checkpointing
 Each result is appended to the output CSV immediately. Rerunning the exact
 same command auto-resumes by skipping already-completed question_ids.
 
-CSV columns (extras)
---------------------
-  option_lengths      Character lengths of A–D as "A:n|B:n|C:n|D:n"
-  longest_option      Letter(s) with max length (pipe-joined on ties, e.g. "B|C")
-  correct_is_longest  True if ground-truth letter is among the longest option(s)
+CSV columns (length / prompt metadata)
+--------------------------------------
+  prompt_template           Fixed instruction text (options filled in at eval time)
+  option_A .. option_D      Raw option text
+  A_length .. D_length      Character lengths of each option
+  longest_option            Letter(s) with max length (pipe-joined on ties, e.g. "B|C")
+  longest_option_length     That max character length
+  correct_is_longest        True if ground-truth is among the longest option(s)
+  predicted_is_longest      True if the model's prediction is among the longest
+  predicted_option_length   Character length of the predicted option ("" if N/A)
+  predicted_rank_by_length  1 = longest, 2 = second-longest, … ("" if N/A; ties share rank)
 
 Arguments
 ---------
@@ -68,13 +74,40 @@ from utilities import (  # noqa: E402
     run_parallel,
 )
 
+PROMPT_TEMPLATE = (
+    "Question: [omitted]\n"
+    "A. {option_A}\n"
+    "B. {option_B}\n"
+    "C. {option_C}\n"
+    "D. {option_D}\n"
+    "\n"
+    "The original question is unavailable.\n"
+    "\n"
+    "Below are the four answer options.\n"
+    "\n"
+    "Choose the option that is most likely to be correct.\n"
+    "\n"
+    "Respond with only A, B, C or D."
+)
+
 FIELDNAMES = [
     "question_id",
     "subject",
-    "options_only_prompt",
-    "option_lengths",
+    "prompt_template",
+    "option_A",
+    "option_B",
+    "option_C",
+    "option_D",
+    "A_length",
+    "B_length",
+    "C_length",
+    "D_length",
     "longest_option",
+    "longest_option_length",
     "correct_is_longest",
+    "predicted_is_longest",
+    "predicted_option_length",
+    "predicted_rank_by_length",
     "ground_truth",
     "predicted",
     "raw_output",
@@ -83,23 +116,13 @@ FIELDNAMES = [
 
 
 def format_options_only(options):
-    prompt = "Question: [omitted]\n"
-    prompt += f"A. {options[0]}\n"
-    prompt += f"B. {options[1]}\n"
-    prompt += f"C. {options[2]}\n"
-    prompt += f"D. {options[3]}\n"
-    prompt += (
-        """
-        The original question is unavailable.
-
-        Below are the four answer options.
-
-        Choose the option that is most likely to be correct.
-
-        Respond with only A, B, C or D.
-        """
+    """Build the API prompt from the fixed template + four option strings."""
+    return PROMPT_TEMPLATE.format(
+        option_A=options[0],
+        option_B=options[1],
+        option_C=options[2],
+        option_D=options[3],
     )
-    return prompt
 
 
 def option_length_features(options, correct_label: str):
@@ -108,21 +131,55 @@ def option_length_features(options, correct_label: str):
 
     Returns
     -------
-    option_lengths : str
-        e.g. "A:12|B:45|C:8|D:30"
+    length_by_label : dict
+        {"A": n, "B": n, "C": n, "D": n}
     longest_option : str
         Letter(s) with max character length; pipe-joined on ties
+    longest_option_length : int
+        That max length
     correct_is_longest : bool
         Whether the ground-truth label is among the longest option(s)
+    rank_by_label : dict
+        Dense rank by length (1 = longest). Ties share the same rank.
     """
     labels = ["A", "B", "C", "D"]
     lengths = [len(str(opt)) for opt in options]
+    length_by_label = dict(zip(labels, lengths))
     max_len = max(lengths) if lengths else 0
     longest = [lab for lab, n in zip(labels, lengths) if n == max_len]
-    option_lengths = "|".join(f"{lab}:{n}" for lab, n in zip(labels, lengths))
     longest_option = "|".join(longest)
     correct_is_longest = str(correct_label).strip().upper() in longest
-    return option_lengths, longest_option, correct_is_longest
+
+    # Dense rank: unique lengths sorted descending → 1, 2, 3, …
+    unique_desc = sorted(set(lengths), reverse=True)
+    rank_of_length = {n: i + 1 for i, n in enumerate(unique_desc)}
+    rank_by_label = {lab: rank_of_length[n] for lab, n in length_by_label.items()}
+
+    return (
+        length_by_label,
+        longest_option,
+        max_len,
+        correct_is_longest,
+        rank_by_label,
+    )
+
+
+def predicted_length_features(
+    predicted_label: str,
+    longest_option: str,
+    length_by_label: dict,
+    rank_by_label: dict,
+):
+    """
+    Return (predicted_is_longest, predicted_option_length, predicted_rank_by_length).
+
+    Length/rank are "" when the prediction is not a valid A–D letter.
+    """
+    pred = str(predicted_label).strip().upper()
+    if pred not in length_by_label:
+        return False, "", ""
+    longest_set = set(str(longest_option).split("|")) if longest_option else set()
+    return pred in longest_set, length_by_label[pred], rank_by_label[pred]
 
 
 def build_sample(data_dir: str, subjects, total_limit: int, seed: int) -> pd.DataFrame:
@@ -220,21 +277,43 @@ def run(args):
         def process_one(item):
             _, row = item
             options = [str(row["A"]), str(row["B"]), str(row["C"]), str(row["D"])]
-            option_lengths, longest_option, correct_is_longest = option_length_features(
-                options, row["label"]
-            )
+            (
+                length_by_label,
+                longest_option,
+                longest_option_length,
+                correct_is_longest,
+                rank_by_label,
+            ) = option_length_features(options, row["label"])
             prompt = format_options_only(options)
             raw_output = evaluator.query(prompt)
             pred_label = extract_answer(raw_output)
             is_correct = pred_label == row["label"]
+            (
+                predicted_is_longest,
+                predicted_option_length,
+                predicted_rank_by_length,
+            ) = predicted_length_features(
+                pred_label, longest_option, length_by_label, rank_by_label
+            )
 
             result_row = {
                 "question_id": row["question_id"],
                 "subject": row["subject"],
-                "options_only_prompt": prompt.replace("\n", " | "),
-                "option_lengths": option_lengths,
+                "prompt_template": PROMPT_TEMPLATE.replace("\n", " | "),
+                "option_A": options[0],
+                "option_B": options[1],
+                "option_C": options[2],
+                "option_D": options[3],
+                "A_length": length_by_label["A"],
+                "B_length": length_by_label["B"],
+                "C_length": length_by_label["C"],
+                "D_length": length_by_label["D"],
                 "longest_option": longest_option,
+                "longest_option_length": longest_option_length,
                 "correct_is_longest": correct_is_longest,
+                "predicted_is_longest": predicted_is_longest,
+                "predicted_option_length": predicted_option_length,
+                "predicted_rank_by_length": predicted_rank_by_length,
                 "ground_truth": row["label"],
                 "predicted": pred_label,
                 "raw_output": raw_output,
@@ -243,7 +322,9 @@ def run(args):
             append_result_row(out_path, result_row, FIELDNAMES)
             print(
                 f"[{row['subject']}] GT={row['label']} | Pred={pred_label} | "
-                f"longest={longest_option} correct_is_longest={correct_is_longest} | "
+                f"longest={longest_option}({longest_option_length}) "
+                f"pred_len={predicted_option_length} "
+                f"pred_rank={predicted_rank_by_length} | "
                 f"{'Correct' if is_correct else 'Incorrect'}"
             )
             return result_row
@@ -276,16 +357,31 @@ def run(args):
             f"Ground truth is longest option: {longest_rate:.2f}% of questions "
             f"({results_df['correct_is_longest'].sum()}/{total})"
         )
-        # Did the model pick the longest option more often than chance?
-        pred_is_longest = results_df.apply(
-            lambda r: str(r["predicted"]) in str(r["longest_option"]).split("|"),
-            axis=1,
-        )
-        pick_longest_rate = pred_is_longest.mean() * 100
+
+    if "predicted_is_longest" in results_df.columns:
+        results_df["predicted_is_longest"] = results_df["predicted_is_longest"].astype(bool)
+        pick_longest_rate = results_df["predicted_is_longest"].mean() * 100
         print(
             f"Model predicted a longest option: {pick_longest_rate:.2f}% "
-            f"({pred_is_longest.sum()}/{total})"
+            f"({results_df['predicted_is_longest'].sum()}/{total})"
         )
+
+    if "predicted_option_length" in results_df.columns:
+        lengths = pd.to_numeric(results_df["predicted_option_length"], errors="coerce")
+        if lengths.notna().any():
+            print(
+                f"Mean predicted option length: {lengths.mean():.1f} chars "
+                f"(median={lengths.median():.1f})"
+            )
+
+    if "predicted_rank_by_length" in results_df.columns:
+        ranks = pd.to_numeric(results_df["predicted_rank_by_length"], errors="coerce")
+        if ranks.notna().any():
+            top2 = (ranks <= 2).sum()
+            print(
+                f"Predicted longest or 2nd-longest: {top2 / ranks.notna().sum() * 100:.2f}% "
+                f"({top2}/{ranks.notna().sum()})"
+            )
 
     print("\n=== PER-SUBJECT BREAKDOWN ===")
     subj_summary = (

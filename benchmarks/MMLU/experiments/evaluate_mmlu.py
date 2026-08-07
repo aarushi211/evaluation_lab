@@ -17,6 +17,8 @@ Output
   benchmarks/MMLU/results/
     {provider}_{model}_{subject}_{shuffled|no_shuffle}_{N}shot_lim{L}.csv
 
+  One CSV per subject (so a full-dataset run can resume subject-by-subject).
+
 Arguments
 ---------
   --provider   {ollama, groq, openai, anthropic, gemini}  (default: ollama)
@@ -24,25 +26,32 @@ Arguments
   --api_key    API key; comma-separated for rotation      (optional; else env)
   --json       Request JSON-shaped A/B/C/D answers        (flag)
 
-  --subject    MMLU subject slug                          (default: anatomy)
+  --subjects   Comma-separated subject list, or "all" for every test subject
+               (default: anatomy). --subject is accepted as an alias.
   --shots      Number of few-shot examples from the dev split (default: 0)
   --shuffle    Shuffle A–D option order (deterministic per row index) (flag)
-  --limit      Max test questions to evaluate             (default: 10)
+  --limit      Max test questions per subject             (default: 10;
+               use 0 for no limit / all questions in each subject)
   --data_dir   Folder containing test/ (and optionally dev/) — Colab-friendly
                (default: <repo>/datasets/MMLU/data/data)
   --workers    Concurrent API threads (default: 1; try 4–8 for cloud APIs)
 
 Example
 -------
-  python evaluate_mmlu.py --provider openai --model gpt-4o-mini \\
-      --subject global_facts --shots 5 --limit 100 --json --workers 8
+  # Single subject, 10 questions (default smoke test)
+  python evaluate_mmlu.py --provider openai --model gpt-4o-mini --json
 
-  # Colab / custom layout:
-  python evaluate_mmlu.py --data_dir /content/data --subject anatomy --limit 10
+  # Full MMLU test set (all subjects, all questions)
+  python evaluate_mmlu.py --provider openai --model gpt-5-nano --json \\
+      --subjects all --limit 0 --workers 8
+
+  # Several subjects, capped
+  python evaluate_mmlu.py --subjects anatomy,global_facts --limit 50 --json
 """
 
 import os
 import sys
+import glob
 import random
 import argparse
 import pandas as pd
@@ -84,6 +93,29 @@ FIELDNAMES = [
 ]
 
 
+def list_subjects(data_dir: str):
+    """Sorted subject slugs that have a test CSV under data_dir/test/."""
+    test_dir = os.path.join(data_dir, "test")
+    return sorted(
+        os.path.basename(f).replace("_test.csv", "")
+        for f in glob.glob(os.path.join(test_dir, "*.csv"))
+    )
+
+
+def parse_subjects(subjects_arg: str, data_dir: str):
+    """Expand 'all' or a comma-separated list into subject slugs."""
+    raw = subjects_arg.strip()
+    if raw.lower() == "all":
+        subjects = list_subjects(data_dir)
+        if not subjects:
+            raise FileNotFoundError(f"No test CSVs found under {os.path.join(data_dir, 'test')}")
+        return subjects
+    subjects = [s.strip() for s in raw.split(",") if s.strip()]
+    if not subjects:
+        raise ValueError("No subjects provided. Pass --subjects all or a comma-separated list.")
+    return subjects
+
+
 def run_evaluation(
     data_dir: str,
     subject: str,
@@ -95,7 +127,8 @@ def run_evaluation(
 ):
     print(
         f"\n--- Evaluating Subject: {subject} "
-        f"(Shuffled Options: {shuffle_options}, Shots: {num_shots}, Workers: {workers}) ---"
+        f"(Shuffled Options: {shuffle_options}, Shots: {num_shots}, "
+        f"Limit: {limit if limit is not None else 'all'}, Workers: {workers}) ---"
     )
 
     test_file = os.path.join(data_dir, "test", f"{subject}_test.csv")
@@ -103,7 +136,7 @@ def run_evaluation(
 
     if not os.path.exists(test_file):
         print(f"Test file not found for {subject}")
-        return
+        return None
 
     test_df = pd.read_csv(
         test_file, header=None, names=["question", "A", "B", "C", "D", "label"]
@@ -116,7 +149,7 @@ def run_evaluation(
         )
         few_shot_prefix = generate_few_shot_prefix(dev_df, num_shots)
 
-    if limit:
+    if limit is not None and limit > 0:
         test_df = test_df.head(limit)
 
     # Stable IDs for resume; keep original row index for deterministic shuffle seeds.
@@ -130,7 +163,7 @@ def run_evaluation(
     os.makedirs(out_dir, exist_ok=True)
     model_slug = evaluator.model_name.replace("/", "_").replace(".", "_")
     shuffle_tag = "shuffled" if shuffle_options else "no_shuffle"
-    lim_tag = limit if limit is not None else "all"
+    lim_tag = limit if limit is not None and limit > 0 else "all"
     out_name = (
         f"{evaluator.provider}_{model_slug}_{subject}_{shuffle_tag}_"
         f"{num_shots}shot_lim{lim_tag}.csv"
@@ -195,12 +228,12 @@ def run_evaluation(
                 "subject": subject,
                 "shots": num_shots,
                 "shuffle": shuffle_options,
-                "limit": limit if limit is not None else "",
+                "limit": lim_tag,
             }
             append_result_row(out_path, result_row, FIELDNAMES)
             print(
-                f"Q{row['question_no']}: GroundTruth={new_label} | Predicted={pred_label} | "
-                f"RawOutput='{raw_output.strip()}' | "
+                f"[{subject}] Q{row['question_no']}: GroundTruth={new_label} | "
+                f"Predicted={pred_label} | RawOutput='{raw_output.strip()}' | "
                 f"{'Correct' if is_correct else 'Incorrect'}"
             )
             return result_row
@@ -208,14 +241,23 @@ def run_evaluation(
         print(f"Running with {max(1, int(workers))} worker(s)...")
         run_parallel(process_one, work_items, workers=workers)
 
+    if not os.path.exists(out_path):
+        return None
+
     results_df = pd.read_csv(out_path)
     results_df["correct"] = results_df["correct"].astype(bool)
     correct_count = int(results_df["correct"].sum())
     total_count = len(results_df)
     accuracy = (correct_count / total_count) * 100 if total_count > 0 else 0
-    print(f"Accuracy: {accuracy:.2f}% ({correct_count}/{total_count})")
+    print(f"Accuracy [{subject}]: {accuracy:.2f}% ({correct_count}/{total_count})")
     print(f"Results file (append-only, safe to resume): {out_path}")
-    return accuracy
+    return {
+        "subject": subject,
+        "accuracy": accuracy,
+        "correct": correct_count,
+        "total": total_count,
+        "out_path": out_path,
+    }
 
 
 if __name__ == "__main__":
@@ -225,7 +267,14 @@ if __name__ == "__main__":
     add_llm_args(parser)
     add_data_dir_arg(parser)
     add_workers_arg(parser)
-    parser.add_argument("--subject", type=str, default="anatomy", help="MMLU subject to run")
+    parser.add_argument(
+        "--subjects",
+        "--subject",
+        dest="subjects",
+        type=str,
+        default="anatomy",
+        help="Comma-separated subject list, or 'all' for every test subject (default: anatomy)",
+    )
     parser.add_argument("--shots", type=int, default=0, help="Number of few-shot examples")
     parser.add_argument(
         "--shuffle",
@@ -233,28 +282,54 @@ if __name__ == "__main__":
         help="Shuffle options to test position/length sensitivity",
     )
     parser.add_argument(
-        "--limit", type=int, default=10, help="Limit number of questions evaluated"
+        "--limit",
+        type=int,
+        default=10,
+        help="Max questions per subject (default: 10; use 0 for no limit / all questions)",
     )
 
     args = parser.parse_args()
     data_dir = resolve_data_dir(args.data_dir, from_file=__file__)
     print(f"Using data_dir: {data_dir}")
 
+    # 0 => no per-subject cap (full subject / full dataset when combined with --subjects all)
+    limit = None if args.limit == 0 else args.limit
+
     try:
+        subjects = parse_subjects(args.subjects, data_dir)
+        print(f"Subjects ({len(subjects)}): {', '.join(subjects[:8])}"
+              + ("..." if len(subjects) > 8 else ""))
+
         evaluator = LLMEvaluator(
             provider=args.provider,
             model_name=args.model,
             api_key=args.api_key,
             use_json=args.json,
         )
-        run_evaluation(
-            data_dir=data_dir,
-            subject=args.subject,
-            evaluator=evaluator,
-            num_shots=args.shots,
-            shuffle_options=args.shuffle,
-            limit=args.limit,
-            workers=args.workers,
-        )
+
+        summaries = []
+        for subject in subjects:
+            summary = run_evaluation(
+                data_dir=data_dir,
+                subject=subject,
+                evaluator=evaluator,
+                num_shots=args.shots,
+                shuffle_options=args.shuffle,
+                limit=limit,
+                workers=args.workers,
+            )
+            if summary is not None:
+                summaries.append(summary)
+
+        if len(summaries) > 1:
+            total_correct = sum(s["correct"] for s in summaries)
+            total_n = sum(s["total"] for s in summaries)
+            overall = (total_correct / total_n * 100) if total_n else 0
+            print("\n=== OVERALL (all subjects) ===")
+            print(f"Accuracy: {overall:.2f}% ({total_correct}/{total_n})")
+            print("\n=== PER-SUBJECT ===")
+            summary_df = pd.DataFrame(summaries)[["subject", "accuracy", "correct", "total"]]
+            summary_df = summary_df.sort_values("accuracy", ascending=False)
+            print(summary_df.to_string(index=False))
     except Exception as e:
         print(f"Initialization/Execution error: {e}")
