@@ -15,9 +15,10 @@ command after a rate-limit / crash to skip already-completed IDs and continue.
 Output
 ------
   benchmarks/MMLU/results/
-    {provider}_{model}_{subject}_{shuffled|no_shuffle}_{N}shot_lim{L}.csv
-
-  One CSV per subject (so a full-dataset run can resume subject-by-subject).
+    Single subject:
+      {provider}_{model}_{subject}_{shuffled|no_shuffle}_{N}shot_lim{L}.csv
+    Multi-subject / --subjects all (one shared file):
+      {provider}_{model}_all_{shuffled|no_shuffle}_{N}shot_lim{L}.csv
 
 Arguments
 ---------
@@ -41,11 +42,11 @@ Example
   # Single subject, 10 questions (default smoke test)
   python evaluate_mmlu.py --provider openai --model gpt-4o-mini --json
 
-  # Full MMLU test set (all subjects, all questions)
+  # Full MMLU test set (all subjects, all questions) → one shared CSV
   python evaluate_mmlu.py --provider openai --model gpt-5-nano --json \\
       --subjects all --limit 0 --workers 8
 
-  # Several subjects, capped
+  # Several subjects, capped → one shared CSV
   python evaluate_mmlu.py --subjects anatomy,global_facts --limit 50 --json
 """
 
@@ -116,19 +117,42 @@ def parse_subjects(subjects_arg: str, data_dir: str):
     return subjects
 
 
+def results_out_path(
+    evaluator: LLMEvaluator,
+    subjects: list,
+    shuffle_options: bool,
+    num_shots: int,
+    limit: int = None,
+) -> str:
+    """One shared CSV for multi-subject / all; subject-named CSV for a single subject."""
+    out_dir = os.path.join(project_root(__file__), "benchmarks", "MMLU", "results")
+    os.makedirs(out_dir, exist_ok=True)
+    model_slug = evaluator.model_name.replace("/", "_").replace(".", "_")
+    shuffle_tag = "shuffled" if shuffle_options else "no_shuffle"
+    lim_tag = limit if limit is not None and limit > 0 else "all"
+    scope = "all" if len(subjects) > 1 else subjects[0]
+    out_name = (
+        f"{evaluator.provider}_{model_slug}_{scope}_{shuffle_tag}_"
+        f"{num_shots}shot_lim{lim_tag}.csv"
+    )
+    return os.path.join(out_dir, out_name)
+
+
 def run_evaluation(
     data_dir: str,
     subject: str,
     evaluator: LLMEvaluator,
+    out_path: str,
     num_shots: int = 0,
     shuffle_options: bool = False,
     limit: int = None,
     workers: int = 1,
 ):
+    lim_tag = limit if limit is not None and limit > 0 else "all"
     print(
         f"\n--- Evaluating Subject: {subject} "
         f"(Shuffled Options: {shuffle_options}, Shots: {num_shots}, "
-        f"Limit: {limit if limit is not None else 'all'}, Workers: {workers}) ---"
+        f"Limit: {lim_tag}, Workers: {workers}) ---"
     )
 
     test_file = os.path.join(data_dir, "test", f"{subject}_test.csv")
@@ -159,25 +183,15 @@ def run_evaluation(
     )
     test_df["question_no"] = range(1, len(test_df) + 1)
 
-    out_dir = os.path.join(project_root(__file__), "benchmarks", "MMLU", "results")
-    os.makedirs(out_dir, exist_ok=True)
-    model_slug = evaluator.model_name.replace("/", "_").replace(".", "_")
-    shuffle_tag = "shuffled" if shuffle_options else "no_shuffle"
-    lim_tag = limit if limit is not None and limit > 0 else "all"
-    out_name = (
-        f"{evaluator.provider}_{model_slug}_{subject}_{shuffle_tag}_"
-        f"{num_shots}shot_lim{lim_tag}.csv"
-    )
-    out_path = os.path.join(out_dir, out_name)
-
     processed_ids = load_processed_ids(out_path)
     remaining = test_df[~test_df["question_id"].isin(processed_ids)]
 
     print(f"Total sample: {len(test_df)} questions.")
     if processed_ids:
+        already = len(test_df) - len(remaining)
         print(
-            f"Found existing results at {out_path} — {len(processed_ids)} already done, "
-            f"{len(remaining)} remaining. Resuming."
+            f"Shared results at {out_path} — {already}/{len(test_df)} for this subject "
+            f"already done, {len(remaining)} remaining. Resuming."
         )
 
     if len(remaining) == 0:
@@ -245,12 +259,15 @@ def run_evaluation(
         return None
 
     results_df = pd.read_csv(out_path)
-    results_df["correct"] = results_df["correct"].astype(bool)
-    correct_count = int(results_df["correct"].sum())
-    total_count = len(results_df)
+    subject_df = results_df[results_df["subject"] == subject]
+    if len(subject_df) == 0:
+        return None
+    subject_df = subject_df.copy()
+    subject_df["correct"] = subject_df["correct"].astype(bool)
+    correct_count = int(subject_df["correct"].sum())
+    total_count = len(subject_df)
     accuracy = (correct_count / total_count) * 100 if total_count > 0 else 0
     print(f"Accuracy [{subject}]: {accuracy:.2f}% ({correct_count}/{total_count})")
-    print(f"Results file (append-only, safe to resume): {out_path}")
     return {
         "subject": subject,
         "accuracy": accuracy,
@@ -297,8 +314,10 @@ if __name__ == "__main__":
 
     try:
         subjects = parse_subjects(args.subjects, data_dir)
-        print(f"Subjects ({len(subjects)}): {', '.join(subjects[:8])}"
-              + ("..." if len(subjects) > 8 else ""))
+        print(
+            f"Subjects ({len(subjects)}): {', '.join(subjects[:8])}"
+            + ("..." if len(subjects) > 8 else "")
+        )
 
         evaluator = LLMEvaluator(
             provider=args.provider,
@@ -307,12 +326,22 @@ if __name__ == "__main__":
             use_json=args.json,
         )
 
+        out_path = results_out_path(
+            evaluator=evaluator,
+            subjects=subjects,
+            shuffle_options=args.shuffle,
+            num_shots=args.shots,
+            limit=limit,
+        )
+        print(f"Results file (append-only, safe to resume): {out_path}")
+
         summaries = []
         for subject in subjects:
             summary = run_evaluation(
                 data_dir=data_dir,
                 subject=subject,
                 evaluator=evaluator,
+                out_path=out_path,
                 num_shots=args.shots,
                 shuffle_options=args.shuffle,
                 limit=limit,
@@ -327,6 +356,7 @@ if __name__ == "__main__":
             overall = (total_correct / total_n * 100) if total_n else 0
             print("\n=== OVERALL (all subjects) ===")
             print(f"Accuracy: {overall:.2f}% ({total_correct}/{total_n})")
+            print(f"Results file: {out_path}")
             print("\n=== PER-SUBJECT ===")
             summary_df = pd.DataFrame(summaries)[["subject", "accuracy", "correct", "total"]]
             summary_df = summary_df.sort_values("accuracy", ascending=False)
