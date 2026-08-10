@@ -55,6 +55,7 @@ CATCHALL_PATTERNS = [
     r'^\s*both .* and .*\s*$',
     r'^\s*all of these\s*\.?\s*$',
     r'^\s*none of these\s*\.?\s*$',
+    r'^\s*none\s*\.?\s*$',
 ]
 CATCHALL_REGEX = re.compile('|'.join(CATCHALL_PATTERNS), flags=re.IGNORECASE)
 
