@@ -1,0 +1,167 @@
+"""
+answer_position_bias.py
+
+Check: Is MMLU's answer key itself skewed toward a particular letter?
+
+This is a pure dataset-artifact check — no model calls needed. If the
+correct answer is disproportionately B or C (say), a model (or a human)
+could exploit that prior without reading the question at all.
+
+Uses a chi-square goodness-of-fit test against the expected uniform
+25%/25%/25%/25% distribution, both overall and per academic category
+(reusing the STEM/Humanities/Social Sciences/Other split from
+subject_bias_analysis.py).
+
+Output
+------
+  benchmarks/MMLU/results/answer_position_bias_{split}.csv
+
+Arguments
+---------
+  --split         Which MMLU split to scan  {test, val, dev}  (default: test)
+  --per_subject   Also print a per-subject skew ranking       (flag)
+  --data_dir      Folder containing test/val/dev — Colab-friendly
+                  (default: <repo>/datasets/MMLU/data/data)
+
+Example
+-------
+  python answer_position_bias.py --split test --per_subject
+  python answer_position_bias.py --data_dir /content/data --split test
+"""
+
+import os
+import sys
+import glob
+import argparse
+import math
+import pandas as pd
+
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+from utilities import add_data_dir_arg, resolve_data_dir  # noqa: E402
+from subject_bias_analysis import CATEGORIES, get_category  # reuse existing category map
+
+LABELS = ['A', 'B', 'C', 'D']
+
+
+def load_all_splits(data_dir: str, split: str) -> pd.DataFrame:
+    split_dir = os.path.join(data_dir, split)
+    csv_files = glob.glob(os.path.join(split_dir, "*.csv"))
+    rows = []
+    for f in csv_files:
+        subject = os.path.basename(f).replace(f"_{split}.csv", "")
+        try:
+            df = pd.read_csv(f, header=None, names=['question', 'A', 'B', 'C', 'D', 'label'])
+            df['subject'] = subject
+            df['category'] = get_category(subject)
+            df['split'] = split
+            rows.append(df)
+        except Exception as e:
+            print(f"Skipping {f}: {e}")
+    if not rows:
+        return pd.DataFrame()
+    combined = pd.concat(rows, ignore_index=True)
+    combined['label'] = combined['label'].astype(str).str.strip()
+    return combined[combined['label'].isin(LABELS)]
+
+
+def chi_square_goodness_of_fit(counts: dict, total: int):
+    """Chi-square test against a uniform expected distribution (25% each)."""
+    expected = total / 4.0
+    if expected == 0:
+        return None, None
+    chi2 = sum(((counts.get(l, 0) - expected) ** 2) / expected for l in LABELS)
+    # chi-square with 3 degrees of freedom -> approximate p-value via
+    # Wilson-Hilferty transformation (no scipy dependency)
+    df = 3
+    p_value = wilson_hilferty_chi2_pvalue(chi2, df)
+    return chi2, p_value
+
+
+def wilson_hilferty_chi2_pvalue(chi2: float, df: int) -> float:
+    """Approximate upper-tail p-value for a chi-square statistic without scipy."""
+    if chi2 <= 0:
+        return 1.0
+    h = 2.0 / (9.0 * df)
+    z = ((chi2 / df) ** (1.0 / 3.0) - (1 - h)) / math.sqrt(h)
+    # standard normal upper-tail via erfc
+    return 0.5 * math.erfc(z / math.sqrt(2))
+
+
+def report(df: pd.DataFrame, label: str):
+    total = len(df)
+    counts = df['label'].value_counts().to_dict()
+    chi2, p_value = chi_square_goodness_of_fit(counts, total)
+
+    print(f"\n=== {label} (n={total}) ===")
+    for l in LABELS:
+        c = counts.get(l, 0)
+        pct = (c / total * 100) if total else 0
+        bar = '#' * int(pct / 2)
+        print(f"  {l}: {c:5d}  ({pct:5.2f}%)  {bar}")
+    if chi2 is not None:
+        print(f"  Chi-square={chi2:.3f}, p={p_value:.4f} "
+              f"({'SIGNIFICANT skew at p<0.05' if p_value < 0.05 else 'not significant at p<0.05'})")
+
+    # Quick "always guess most common letter" heuristic accuracy
+    if counts:
+        most_common_letter, most_common_count = max(counts.items(), key=lambda kv: kv[1])
+        heuristic_acc = most_common_count / total * 100 if total else 0
+        print(f"  'Always guess {most_common_letter}' heuristic would score: {heuristic_acc:.2f}% "
+              f"(vs. 25% random chance)")
+
+
+def run(args):
+    _script_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = resolve_data_dir(args.data_dir, from_file=__file__)
+    print(f"Using data_dir: {data_dir}")
+
+    df = load_all_splits(data_dir, args.split)
+    if df.empty:
+        print(f"No data found for split '{args.split}'. Check --split and your data_dir path.")
+        return
+
+    report(df, f"OVERALL ({args.split} split)")
+
+    print("\n\n########## BY ACADEMIC CATEGORY ##########")
+    for cat in sorted(df['category'].unique()):
+        report(df[df['category'] == cat], cat)
+
+    if args.per_subject:
+        print("\n\n########## BY SUBJECT (sorted by max skew) ##########")
+        subject_rows = []
+        for subject, sub_df in df.groupby('subject'):
+            total = len(sub_df)
+            counts = sub_df['label'].value_counts().to_dict()
+            max_pct = max(counts.get(l, 0) for l in LABELS) / total * 100 if total else 0
+            subject_rows.append((subject, total, max_pct))
+        subject_rows.sort(key=lambda r: r[2], reverse=True)
+        for subject, total, max_pct in subject_rows[:15]:
+            print(f"  {subject:45s} n={total:4d}  max-letter-share={max_pct:.2f}%")
+
+    out_dir = os.path.join(_script_dir, '..', 'results')
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f"answer_position_bias_{args.split}.csv")
+    summary_rows = []
+    for cat in df['category'].unique():
+        sub = df[df['category'] == cat]
+        counts = sub['label'].value_counts().to_dict()
+        row = {'group': cat, 'total': len(sub)}
+        row.update({l: counts.get(l, 0) for l in LABELS})
+        summary_rows.append(row)
+    overall_counts = df['label'].value_counts().to_dict()
+    overall_row = {'group': 'OVERALL', 'total': len(df)}
+    overall_row.update({l: overall_counts.get(l, 0) for l in LABELS})
+    summary_rows.append(overall_row)
+    pd.DataFrame(summary_rows).to_csv(out_path, index=False)
+    print(f"\nSaved summary to: {out_path}")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Check MMLU's answer key for letter-position bias (no API calls)")
+    add_data_dir_arg(parser)
+    parser.add_argument('--split', type=str, default='test', choices=['test', 'val', 'dev'])
+    parser.add_argument('--per_subject', action='store_true', help="Also print a per-subject skew ranking")
+    run(parser.parse_args())
