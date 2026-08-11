@@ -1,0 +1,56 @@
+"question_id","row_id","subject","subject_category","has_negation","negation_type","question_length","question","ground_truth","predicted","raw_output","correct"
+"2d5e426f08fe","e42ad4a58dbe","marketing","Other (Applied/Professional)","False","NONE","128","On August 4, a store purchased five sofas invoiced at $7,000, terms 2/10 , n/30 . The invoice was paid August 13. The store paid","C","C","To calculate the amount paid by the store, we need to apply the terms of the invoice.
+
+The terms are 2/10, n/30, which means:
+
+* 2% discount if paid within 10 days
+* Net 30 days (no discount) if paid after 10 days
+
+Since the invoice was paid on August 13, which is 9 days after the due date (August 4), we can apply the 2% discount.
+
+Discount = 2% of $7,000 = 0.02 x $7,000 = $140
+
+Amount paid = Original price - Discount
+= $7,000 - $140
+= $6,860
+
+Therefore, the correct answer is C. $6,860.","True"
+"d92cff2971d7","20adcc6cdd80","college_medicine","Other (Applied/Professional)","False","NONE","73","Phophocreatine resynthesis during recovery from exercise is inhibited by:","D","C","The correct answer is D. a lack of oxygen.
+
+Phosphocreatine (PCr) resynthesis during recovery from exercise is inhibited by a lack of oxygen, also known as anaerobic conditions. When the body's energy stores are depleted and it needs to replenish them quickly, phosphocreatine kinase catalyzes the conversion of creatine and ADP into ATP and phosphocreatine in an anaerobic reaction.
+
+In the absence of sufficient oxygen (anaerobic conditions), this process is slowed down or inhibited. This is because the enzyme phosphocreatine kinase requires oxygen to function properly, and without it, the reaction cannot proceed efficiently.
+
+The other options are not correct:
+
+A. An excess of creatine would actually facilitate phosphocreatine resynthesis, as there would be more substrate available for the reaction.
+
+B. Hyperventilation is a respiratory technique that can help increase oxygen delivery to the muscles during exercise, but it does not directly inhibit phosphocreatine resynthesis.
+
+C. An excess of oxygen would actually enhance phosphocreatine resynthesis by providing the necessary energy source (ATP) and reducing oxidative stress.","False"
+"6d2015ecb5db","f91821db78c0","high_school_government_and_politics","Social Sciences","False","NONE","131","The House Rules Committee is considered among the most powerful in the House of Representatives because it has great power over the","D","A","The correct answer is D. scheduling of votes and the conditions under which bills are debated and amended.
+
+The House Rules Committee plays a crucial role in shaping the legislative process by controlling the flow of legislation through the House. Its power over the scheduling of votes, as well as the conditions under which bills are debated and amended, gives it significant influence over the legislative agenda.
+
+While the committee does have some authority over subcommittees (C) and may have some indirect influence on the selection of federal judges (B), its primary role is in shaping the legislative process. The House Rules Committee's power to schedule votes and control amendments is a key factor in determining which bills receive attention and how they are processed.
+
+The committee does not have direct authority over the ethical conduct of House members (A). That responsibility falls under the jurisdiction of the House Ethics Committee, which investigates allegations of misconduct by members.","False"
+"5a8ef08a5430","3b3d7ec2a69d","high_school_geography","Social Sciences","False","NONE","27","The global lingua franca is","B","B","The correct answer is B. English.
+
+English has become the most widely spoken language in the world, used as a common language for communication among people from different countries and cultures. It is estimated that over 1.5 billion people speak English, making it the most widely spoken language globally.
+
+While Chinese, French, and Arabic are all important languages with significant global influence, they do not have the same level of widespread use as a lingua franca as English does.","True"
+"5daf6b468174","150da717dc1e","professional_accounting","Other (Applied/Professional)","True","NOT","530","On October 31, year 1, a company with a calendar year-end paid $90,000 for services that will be performed evenly over a sixmonth period from November 1, year 1, through April 30, year 2. The company expensed the $90,000 cash payment in October, year 1, to its services expense general ledger account. The company did not record any additional journal entries in year 1 related to the payment. What is the adjusting journal entry that the company should record to properly report the prepayment in its year 1 financial statements?","B","N/A","To properly report the prepayment in its year 1 financial statements, the company should record an adjusting journal entry to match the cost of the service with the period it is earned.
+
+The total amount paid is $90,000, which will be evenly spread over a six-month period. To find the monthly amount, we can divide the total amount by 6:
+
+$90,000 ÷ 6 = $15,000 per month
+
+Since the company has already expensed $30,000 in October (half of the total), it needs to record an adjusting entry for the remaining $60,000.
+
+The adjusting journal entry should be:
+
+Debit: Prepaid services ($60,000)
+Credit: Services expense ($60,000)
+
+This will properly match the cost of the service with the period it is earned, rather than expensing half of it in October and the other half in April.","False"
