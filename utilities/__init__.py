@@ -11,7 +11,8 @@ Public exports
   load_dotenv, project_root, ensure_project_on_path, dataset_dir, resolve_data_dir
   LLMEvaluator, SUPPORTED_PROVIDERS
   format_question, generate_few_shot_prefix, extract_answer
-  make_question_id, load_processed_ids, append_result_row
+  make_question_id, make_row_id, assign_eval_ids, load_processed_ids,
+  filter_unprocessed, append_result_row
   add_llm_args, add_data_dir_arg, add_workers_arg
   run_parallel
 
@@ -34,7 +35,14 @@ from utilities.paths import (
 )
 from utilities.llm import LLMEvaluator, SUPPORTED_PROVIDERS
 from utilities.mcq import format_question, generate_few_shot_prefix, extract_answer
-from utilities.checkpoint import make_question_id, load_processed_ids, append_result_row
+from utilities.checkpoint import (  # noqa: E501
+    make_question_id,
+    make_row_id,
+    assign_eval_ids,
+    load_processed_ids,
+    filter_unprocessed,
+    append_result_row,
+)
 from utilities.cli import add_llm_args, add_data_dir_arg, add_workers_arg
 from utilities.parallel import run_parallel
 
@@ -50,7 +58,10 @@ __all__ = [
     "generate_few_shot_prefix",
     "extract_answer",
     "make_question_id",
+    "make_row_id",
+    "assign_eval_ids",
     "load_processed_ids",
+    "filter_unprocessed",
     "append_result_row",
     "add_llm_args",
     "add_data_dir_arg",

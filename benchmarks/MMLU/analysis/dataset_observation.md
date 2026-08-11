@@ -147,7 +147,7 @@ Val | 3
 | `high_school_chemistry_test.csv` | 141 | *When potassium perchlorate dissolves in water...* | **A**: ...spontaneous because it is exothermic, **D**: ...spontaneous because it is exothermic (A & D identical) |
 
 ## Category and Subject-Level Bias Patterns
-By mapping the 57 subjects into four broad academic divisions (STEM, Humanities, Social Sciences, and Applied/Professional),highly localized patterns of bias were discovered:
+By mapping the 57 subjects into four broad academic divisions (STEM, Humanities, Social Sciences, and Applied/Professional), highly localized patterns of bias were discovered:
 
 | Academic Category | Total Questions | Longest Option Bias (%) | Negation/Except Questions (%) |
 | :--- | :--- | :--- | :--- |
