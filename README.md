@@ -1,114 +1,98 @@
 # Evaluation Lab
-A public research notebook on LLM evaluation, benchmarking, and reliability.
 
-This repository documents my journey studying how we evaluate large language models, RAG systems, and AI agents. It contains paper reviews, benchmark reproductions, experiments, and original evaluation ideas.
+**Stress-testing how we measure LLMs - not just reporting another leaderboard score.**
 
-## Why?
-LLMs are improving rapidly, but measuring their capabilities reliably remains an open research problem.
+Benchmarks like MMLU, HELM, and TruthfulQA are treated as ground truth for model quality. This repository asks a more basic question: **how much of a score is capability, and how much is an artifact of the benchmark?**
 
-Instead of focusing on building more applications, this repository explores questions such as:
+This is a **multi-benchmark research lab**. Each paper gets the same two-layer treatment; MMLU is only the first case study.
 
-- How should we evaluate LLMs?
-- What makes a good benchmark?
-- When can LLMs judge other LLMs?
-- How should RAG and agentic systems be evaluated?
-- Which evaluation metrics correlate with human judgment?
+1. **Dataset forensics** - label skew, length bias, duplicates, split leakage, linguistic artifacts (negation, catch-alls, …).
+2. **Controlled interventions** - hide the question, shuffle options, perturb the stem, swap distractors - then test whether those quirks actually move accuracy.
 
-## Repository Structure
+The goal is a reusable protocol and toolkit, not a one-off MMLU write-up.
+
+---
+
+## Why this exists
+
+Headline numbers are easy to cite and hard to interpret. If a heuristic (e.g. “pick the longest option”) already beats chance, if models score well with the *question omitted*, or if a small typo systematically flips answers, then the published score is not a pure measure of the skill the benchmark claims to test.
+
+This lab is for:
+
+- **Researchers / faculty** who care about evaluation validity, not only SOTA tables
+- **Hiring managers** looking for experiment design, reproducible eval code, and statistical claims tied to artifacts
+
+It is *not* an app demo, a wrapper around someone else’s harness, or a dump of paper summaries.
+
+---
+
+## Method (same for every benchmark)
 
 ```
-utilities/              # Shared eval toolkit (LLM clients, MCQ parsing, checkpoints)
+ingest splits → forensic scripts → dataset note
+      → intervention experiments (paired across models)
+      → findings note + CSVs
+```
+
+**Eval engineering** (so runs stay comparable as the lab grows):
+
+- Multi-provider client: Ollama, Groq, OpenAI, Anthropic, Gemini
+- Append-only CSVs; resume after rate limits / crashes
+- `question_id` = hash(content) for matching; `row_id` = hash(subject + row) so duplicates still run
+- Shared CLI, seeds, and workers so two models see the same items
+---
+
+## Case studies
+
+| Benchmark | Dataset forensics | Model interventions | Notes |
+|-----------|-------------------|---------------------|--------|
+| **MMLU** | Done | In progress | First full pass of the protocol. [Data](benchmarks/MMLU/analysis/dataset_observation.md) · [Experiments](benchmarks/MMLU/analysis/experimental_findings.md) |
+| HELM | Planned | - | Next; same two-layer template |
+| TruthfulQA | Planned | - | |
+| SWE-Bench / agents | Later | - | Trajectories, not only MCQ |
+
+---
+
+## Repository layout
+
+```
+utilities/                 Shared toolkit (providers, MCQ parse, checkpoints, CLI)
 benchmarks/
-    <BenchmarkName>/
-        notes/          # Paper PDF, summary, and reading notes
-        analysis/       # Dataset limitations and observations
-        experiments/    # Python evaluation scripts
-datasets/
-    <BenchmarkName>/
-        data/           # Raw CSV splits (dev, val, test)
-experiments/            # Cross-benchmark experiment notebooks
+  <Name>/
+    notes/                 Paper notes
+    analysis/              Dataset observations + experimental findings
+    experiments/           Stats + eval scripts
+    results/               Run CSVs
+datasets/<Name>/           Local splits (test / dev / val)
 ```
 
-### Shared utilities
+Adding a benchmark means a new folder that follows this template, plus whatever `utilities/` already provides.
 
-`utilities/` holds reusable pieces for future papers (HELM, TruthfulQA, …):
+---
+
+## Toolkit (`utilities/`)
 
 | Module | Role |
 |--------|------|
-| `llm.py` | Multi-provider client: `ollama`, `groq`, `openai`, `anthropic`, `gemini` |
-| `mcq.py` | A–D prompting + answer extraction |
-| `checkpoint.py` | Append-only CSV resume helpers |
-| `env.py` / `paths.py` / `cli.py` | `.env` loading, dataset paths, shared CLI flags |
+| `llm.py` | `LLMEvaluator` — ollama / groq / openai / anthropic / gemini |
+| `mcq.py` | Prompt formatting and A–D extraction |
+| `checkpoint.py` | `question_id` / `row_id`, resume, append-only CSV |
+| `cli.py` / `parallel.py` | Shared flags (`--provider`, `--data_dir`, `--workers`) |
 
-Put API keys in a root `.env` (see `.gitignore`):
-
-```
-GROQ_API_KEY=...
-OPENAI_API_KEY=...
-ANTHROPIC_API_KEY=...
-GEMINI_API_KEY=...   # or GOOGLE_API_KEY
-```
-
-Example:
+API keys in a root `.env` (not committed): `OPENAI_API_KEY`, `GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`.
 
 ```bash
 python benchmarks/MMLU/experiments/evaluate_mmlu.py \
   --provider openai --model gpt-4o-mini --subject anatomy --limit 10 --json
 ```
 
-## Current Learning Roadmap
-- [x] MMLU
-- [ ] HELM
-- [ ] TruthfulQA
-- [ ] SWE-Bench
-- [ ] Arena-Hard
-- [ ] AlpacaEval
-- [ ] BrowserArena
-- [ ] GAIA
-- [ ] DeepEval
-- [ ] LM Evaluation Harness
+---
 
-## Current Interests
+## How to read this repo
 
-- LLM evaluation
-- Benchmark design
-- Agent evaluation
-- RAG evaluation
-- LLM-as-a-Judge
-- Evaluation reliability
-- Statistical analysis of benchmarks
+1. This README - scope of the lab.
+2. The case-study table - which benchmark is in which stage.
+3. That benchmark’s `analysis/` - claims and numbers.
+4. `experiments/` + `utilities/` - how to rerun them.
 
-| Paper | Status | Notes |
-|--------|--------|-------|
-| MMLU | ✅ | Completed analysis, bias detection, and local/API evaluation |
-| HELM | ⏳ | Planned |
-| TruthfulQA | ⏳ | Planned |
-| SWE-Bench | ⏳ | Planned |
-
-## Open Questions
-
-- Can retrieval metrics predict hallucination?
-- Can agent trajectories be evaluated before task completion?
-- When do LLM judges disagree with humans?
-- How stable are benchmark rankings over time?
-- Can benchmark contamination be detected automatically?
-
-## Goals
-
-- Build an open-source evaluation toolkit
-- Publish an evaluation benchmark
-- Contribute to LM Evaluation Harness
-- Write technical blogs on evaluation
-- Conduct reproducible benchmark studies
-
-## Principles
-
-This repository is not a collection of paper summaries.
-
-For every paper I study, I aim to answer:
-
-- What problem does this evaluation solve?
-- What assumptions does it make?
-- What are its limitations?
-- Can I reproduce the results?
-- Can I improve the methodology?
+If a number is not in those files, it does not belong in the notes.
