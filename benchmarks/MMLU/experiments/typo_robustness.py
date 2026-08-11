@@ -25,6 +25,8 @@ Checkpointing
 -------------
 Each question is evaluated as a pair (original + typo'd) and appended to the
 CSV immediately (2 API calls per row). Rerun the same command to resume.
+question_id = MD5(subject::question); row_id = MD5(subject::row_number)
+so duplicate stems are still evaluated. Resume skips completed row_ids.
 If a run dies mid-pair, that pair is re-run from scratch on resume.
 
 Arguments
@@ -71,8 +73,8 @@ from utilities import (  # noqa: E402
     append_result_row,
     extract_answer,
     format_question,
-    load_processed_ids,
-    make_question_id,
+    assign_eval_ids,
+    filter_unprocessed,
     project_root,
     resolve_data_dir,
     run_parallel,
@@ -109,6 +111,7 @@ QWERTY_ADJACENCY = {
 
 FIELDNAMES = [
     "question_id",
+    "row_id",
     "subject",
     "question",
     "typo_question",
@@ -227,6 +230,7 @@ def build_sample(data_dir: str, subjects, total_limit: int, seed: int) -> pd.Dat
             test_file, header=None, names=["question", "A", "B", "C", "D", "label"]
         )
         df["subject"] = subject
+        df["row_no"] = df.index + 1
         df["label"] = df["label"].astype(str).str.strip()
         all_rows.append(df)
 
@@ -237,9 +241,7 @@ def build_sample(data_dir: str, subjects, total_limit: int, seed: int) -> pd.Dat
     sample = combined.sample(
         n=min(total_limit, len(combined)), random_state=seed
     ).reset_index(drop=True)
-    sample["question_id"] = sample.apply(
-        lambda r: make_question_id(r["subject"], r["question"]), axis=1
-    )
+    sample = assign_eval_ids(sample)
     return sample
 
 
@@ -274,17 +276,17 @@ def run(args):
     )
     out_path = os.path.join(out_dir, out_name)
 
-    processed_ids = load_processed_ids(out_path)
-    remaining = sample_df[~sample_df["question_id"].isin(processed_ids)]
+    remaining = filter_unprocessed(sample_df, out_path)
 
     print(
         f"Total sample: {len(sample_df)} questions across "
         f"{sample_df['subject'].nunique()} subjects. "
         f"Each requires 2 API calls (original + typo'd)."
     )
-    if processed_ids:
+    already = len(sample_df) - len(remaining)
+    if already:
         print(
-            f"Found existing results at {out_path} — {len(processed_ids)} already done, "
+            f"Found existing results at {out_path} — {already} already done, "
             f"{len(remaining)} remaining. Resuming."
         )
 
@@ -317,6 +319,7 @@ def run(args):
 
             result_row = {
                 "question_id": row["question_id"],
+                "row_id": row["row_id"],
                 "subject": row["subject"],
                 "question": row["question"],
                 "typo_question": row["typo_question"],

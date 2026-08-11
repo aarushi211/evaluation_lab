@@ -13,7 +13,9 @@ correct to reason about at all.
 Checkpointing
 -------------
 Each result is appended to the output CSV immediately. Rerunning the exact
-same command auto-resumes by skipping already-completed question_ids.
+same command auto-resumes by skipping already-completed row_ids.
+question_id = MD5(subject::question); row_id = MD5(subject::row_number)
+so duplicate stems are still evaluated.
 
 CSV columns (length / prompt metadata)
 --------------------------------------
@@ -67,8 +69,8 @@ from utilities import (  # noqa: E402
     add_workers_arg,
     append_result_row,
     extract_answer,
-    load_processed_ids,
-    make_question_id,
+    assign_eval_ids,
+    filter_unprocessed,
     project_root,
     resolve_data_dir,
     run_parallel,
@@ -92,6 +94,7 @@ PROMPT_TEMPLATE = (
 
 FIELDNAMES = [
     "question_id",
+    "row_id",
     "subject",
     "prompt_template",
     "option_A",
@@ -192,6 +195,7 @@ def build_sample(data_dir: str, subjects, total_limit: int, seed: int) -> pd.Dat
             test_file, header=None, names=["question", "A", "B", "C", "D", "label"]
         )
         df["subject"] = subject
+        df["row_no"] = df.index + 1
         df["label"] = df["label"].astype(str).str.strip()
         all_rows.append(df)
 
@@ -203,9 +207,7 @@ def build_sample(data_dir: str, subjects, total_limit: int, seed: int) -> pd.Dat
     sample = combined.sample(
         n=min(total_limit, len(combined)), random_state=seed
     ).reset_index(drop=True)
-    sample["question_id"] = sample.apply(
-        lambda r: make_question_id(r["subject"], r["question"]), axis=1
-    )
+    sample = assign_eval_ids(sample)
     return sample
 
 
@@ -248,17 +250,17 @@ def run(args):
     )
     out_path = os.path.join(out_dir, out_name)
 
-    processed_ids = load_processed_ids(out_path)
-    remaining = sample_df[~sample_df["question_id"].isin(processed_ids)]
+    remaining = filter_unprocessed(sample_df, out_path)
 
     print(
         f"Total sample: {len(sample_df)} questions across "
         f"{sample_df['subject'].nunique()} subjects. "
         f"Question text will be hidden from the model."
     )
-    if processed_ids:
+    already = len(sample_df) - len(remaining)
+    if already:
         print(
-            f"Found existing results at {out_path} — {len(processed_ids)} already done, "
+            f"Found existing results at {out_path} — {already} already done, "
             f"{len(remaining)} remaining. Resuming."
         )
 
@@ -298,6 +300,7 @@ def run(args):
 
             result_row = {
                 "question_id": row["question_id"],
+                "row_id": row["row_id"],
                 "subject": row["subject"],
                 "prompt_template": PROMPT_TEMPLATE.replace("\n", " | "),
                 "option_A": options[0],

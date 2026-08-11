@@ -9,8 +9,9 @@ anthropic / gemini without changing this script.
 Checkpointing
 -------------
 Each question is appended to the results CSV immediately (flush + fsync).
-question_id is a stable MD5 of "subject::question". Rerun the exact same
-command after a rate-limit / crash to skip already-completed IDs and continue.
+question_id = MD5(subject::question) — same stem shares an ID.
+row_id      = MD5(subject::row_number) — unique per CSV row, so duplicates run.
+Resume skips completed row_ids.
 
 Output
 ------
@@ -68,11 +69,11 @@ from utilities import (  # noqa: E402
     add_llm_args,
     add_workers_arg,
     append_result_row,
+    assign_eval_ids,
     extract_answer,
+    filter_unprocessed,
     format_question,
     generate_few_shot_prefix,
-    load_processed_ids,
-    make_question_id,
     project_root,
     resolve_data_dir,
     run_parallel,
@@ -80,6 +81,7 @@ from utilities import (  # noqa: E402
 
 FIELDNAMES = [
     "question_id",
+    "row_id",
     "question_no",
     "ground_truth",
     "predicted",
@@ -173,22 +175,21 @@ def run_evaluation(
         )
         few_shot_prefix = generate_few_shot_prefix(dev_df, num_shots)
 
+    # Original 1-based CSV row, before limit / sampling, so duplicate stems
+    # still get distinct row_ids.
+    test_df = test_df.copy()
+    test_df["row_no"] = test_df.index + 1
+    test_df = assign_eval_ids(test_df, subject=subject)
+    test_df["question_no"] = test_df["row_no"]
+
     if limit is not None and limit > 0:
         test_df = test_df.head(limit)
 
-    # Stable IDs for resume; keep original row index for deterministic shuffle seeds.
-    test_df = test_df.copy()
-    test_df["question_id"] = test_df["question"].apply(
-        lambda q: make_question_id(subject, q)
-    )
-    test_df["question_no"] = range(1, len(test_df) + 1)
-
-    processed_ids = load_processed_ids(out_path)
-    remaining = test_df[~test_df["question_id"].isin(processed_ids)]
+    remaining = filter_unprocessed(test_df, out_path)
 
     print(f"Total sample: {len(test_df)} questions.")
-    if processed_ids:
-        already = len(test_df) - len(remaining)
+    already = len(test_df) - len(remaining)
+    if already:
         print(
             f"Shared results at {out_path} — {already}/{len(test_df)} for this subject "
             f"already done, {len(remaining)} remaining. Resuming."
@@ -232,6 +233,7 @@ def run_evaluation(
 
             result_row = {
                 "question_id": row["question_id"],
+                "row_id": row["row_id"],
                 "question_no": int(row["question_no"]),
                 "ground_truth": new_label,
                 "predicted": pred_label,

@@ -22,7 +22,9 @@ To isolate the negation effect:
 Checkpointing
 -------------
 Every question's result is appended to the output CSV immediately. Rerun the
-exact same command to resume from already-completed question_ids.
+exact same command to resume from already-completed row_ids.
+question_id = MD5(subject::question); row_id = MD5(subject::row_number)
+so duplicate stems are still evaluated.
 
 CSV columns (extras)
 --------------------
@@ -74,8 +76,8 @@ from utilities import (  # noqa: E402
     append_result_row,
     extract_answer,
     format_question,
-    load_processed_ids,
-    make_question_id,
+    assign_eval_ids,
+    filter_unprocessed,
     project_root,
     resolve_data_dir,
     run_parallel,
@@ -86,6 +88,7 @@ NEGATION_PATTERN = r"\b(?:not|except|false|incorrect|wrong)\b"
 
 FIELDNAMES = [
     "question_id",
+    "row_id",
     "subject",
     "subject_category",
     "has_negation",
@@ -124,6 +127,7 @@ def load_subject_df(data_dir: str, subject: str) -> pd.DataFrame:
         test_file, header=None, names=["question", "A", "B", "C", "D", "label"]
     )
     df["subject"] = subject
+    df["row_no"] = df.index + 1
     df["subject_category"] = get_category(subject)
     df["label"] = df["label"].astype(str).str.strip()
     classified = df["question"].astype(str).map(classify_negation)
@@ -164,9 +168,7 @@ def build_sample(
 
     combined = pd.concat(all_samples, ignore_index=True)
     combined = combined.sample(frac=1.0, random_state=seed).reset_index(drop=True)
-    combined["question_id"] = combined.apply(
-        lambda r: make_question_id(r["subject"], r["question"]), axis=1
-    )
+    combined = assign_eval_ids(combined)
     return combined
 
 
@@ -219,8 +221,7 @@ def run(args):
     )
     out_path = os.path.join(out_dir, out_name)
 
-    processed_ids = load_processed_ids(out_path)
-    remaining = sample_df[~sample_df["question_id"].isin(processed_ids)]
+    remaining = filter_unprocessed(sample_df, out_path)
 
     print(
         f"Total sample: {len(sample_df)} questions across "
@@ -228,9 +229,10 @@ def run(args):
         f"({sample_df['has_negation'].sum()} negation / "
         f"{(~sample_df['has_negation']).sum()} non-negation)."
     )
-    if processed_ids:
+    already = len(sample_df) - len(remaining)
+    if already:
         print(
-            f"Found existing results at {out_path} — {len(processed_ids)} already done, "
+            f"Found existing results at {out_path} — {already} already done, "
             f"{len(remaining)} remaining. Resuming."
         )
 
@@ -256,6 +258,7 @@ def run(args):
 
             result_row = {
                 "question_id": row["question_id"],
+                "row_id": row["row_id"],
                 "subject": row["subject"],
                 "subject_category": row["subject_category"],
                 "has_negation": row["has_negation"],
