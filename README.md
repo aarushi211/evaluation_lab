@@ -12,6 +12,22 @@ This is a **multi-benchmark research lab**. Each paper gets the same two-layer t
 The goal is a reusable protocol and toolkit, not a one-off MMLU write-up.
 
 ---
+## First Investigation: MMLU
+
+I started with MMLU and tested how model performance changes when information that should be irrelevant to the underlying task is modified.
+
+Some of the experiments include:
+- removing the question entirely
+- shuffling answer choices
+- analyzing answer-length and position patterns
+- testing lexical negation
+- introducing small typos
+
+📖 **Read the full investigation:** [Substack article](https://aarushijain750597.substack.com/p/how-much-of-an-mmlu-score-comes-from?r=90nqwv&utm_campaign=post&utm_medium=web&showWelcomeOnShare=true)
+
+🔬 **Experiments, results, and analysis:** [`benchmarks/MMLU/`](benchmarks/MMLU/)
+
+---
 
 ## Why this exists
 
