@@ -1,0 +1,12 @@
+scope,split,subject,duplicate_groups,duplicate_rows,excess_rows,max_group_size
+cross_subject,test,__CROSS_SUBJECT__,78,156,78,2
+cross_subject,val,__CROSS_SUBJECT__,2,4,2,2
+subject,dev,college_physics,1,2,1,2
+subject,dev,__ALL__,1,2,1,2
+subject,test,__ALL__,27,54,27,2
+subject,test,college_physics,11,22,11,2
+subject,test,high_school_psychology,11,22,11,2
+subject,test,public_relations,2,4,2,2
+subject,test,elementary_mathematics,1,2,1,2
+subject,test,professional_psychology,1,2,1,2
+subject,test,us_foreign_policy,1,2,1,2

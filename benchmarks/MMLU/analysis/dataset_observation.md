@@ -142,9 +142,78 @@ Val | 3
 ### Example Cases
 | Subject File | Line No. | Question | Choices |
 | :--- | :--- | :--- | :--- |
-| `elementary_mathematics_val.csv` | 37 | *What is the value of \|3 + 5\| − \|−4\|?* | **A**: 12, **B**: -4, **C**: 4, **D**: 12 (A & D identical) |
-| `business_ethics_test.csv` | 3 | *______ are the obligations of workers...* | **A**: Employee rights, **B**: Employee rights, **C**: Employer duties, **D**: Employee duties (A & B identical) |
-| `high_school_chemistry_test.csv` | 141 | *When potassium perchlorate dissolves in water...* | **A**: ...spontaneous because it is exothermic, **D**: ...spontaneous because it is exothermic (A & D identical) |
+| elementary_mathematics_val.csv | 37 | *What is the value of \|3 + 5\| − \|−4\|?* | **A**: 12, **B**: -4, **C**: 4, **D**: 12 (A & D identical) |
+| business_ethics_test.csv | 3 | *______ are the obligations of workers...* | **A**: Employee rights, **B**: Employee rights, **C**: Employer duties, **D**: Employee duties (A & B identical) |
+| high_school_chemistry_test.csv | 141 | *When potassium perchlorate dissolves in water...* | **A**: ...spontaneous because it is exothermic, **D**: ...spontaneous because it is exothermic (A & D identical) |
+
+## Duplicate Questions
+In addition to identical choices within a single row, the same evaluation item can appear more than once, either inside one subject file or shared across two subjects in the same split.
+
+*Same stem (question) — screening**
+
+| Split | Scope | Duplicate groups | Duplicate rows | Excess rows | Max group size |
+| :--- | :--- | ---: | ---: | ---: | ---: |
+| Test | Within-subject | 78 | 163 | 85 | 6 |
+| Test | Cross-subject | 80 | 180 | 100 | 10 |
+| Dev | Within-subject | 1 | 2 | 1 | 2 |
+| Val | Within-subject | 1 | 2 | 1 | 2 |
+| Val | Cross-subject | 2 | 4 | 2 | 2 |
+
+**Same item (question_options) — primary**
+
+| Split | Scope | Duplicate groups | Duplicate rows | Excess rows | Max group size |
+| :--- | :--- | ---: | ---: | ---: | ---: |
+| Test | Within-subject | 27 | 54 | 27 | 2 |
+| Test | Cross-subject | 78 | 156 | 78 | 2 |
+| Dev | Within-subject | 1 | 2 | 1 | 2 |
+| Val | Cross-subject | 2 | 4 | 2 | 2 |
+
+On the test set, full matches question_options exactly (same 108 groups / 108 excess rows). A separate label-conflict scan (same stem + options, **different** ground-truth labels) found **no** inconsistent items.
+
+### Test Within-Subject Item Duplicates (by subject)
+
+| Subject | Groups | Excess rows |
+| :--- | ---: | ---: |
+| college_physics | 11 | 11 |
+| high_school_psychology | 11 | 11 |
+| public_relations | 2 | 2 |
+| elementary_mathematics | 1 | 1 |
+| professional_psychology | 1 | 1 |
+| us_foreign_policy | 1 | 1 |
+| **Total** | **27** | **27** |
+
+### Example Cases
+
+**Same item within a subject** (college_physics_test.csv):
+
+> *White light is normally incident on a puddle of water… A thin (500 nm) layer of oil…*
+
+- Rows **2** and **98**, identical options, label **C** in both copies.
+
+**Same item across subjects** (test):
+
+> *Kinase reactions:*
+
+- clinical_knowledge_test.csv line **35** (label B)
+- college_medicine_test.csv line **145** (label B)
+
+**Stem match that is *not* the same item** (astronomy_test.csv) — illustrates why stem-only screening over-counts:
+
+> *Why is Saturn almost as big as Jupiter despite its smaller mass?*
+
+- Rows **43** and **51** share the stem and options A/B, but **C** and **D** differ (option order / distractors changed). Counted under question, not under question_options.
+
+### Key Observations:
+- Moving from stem-only to stem+options on the **test** set cuts within-subject groups from **78 → 27**. Many “duplicates” are the same wording with different distractors — soft repeats, not identical items.
+- Cross-subject repeats barely change (**80 → 78** groups): most shared stems across subjects are true same-item copies (same A–D text).
+- On test, **78 excess cross-subject rows** plus **27 excess within-subject rows** are exact item repeats under question_options. That is a measurable inflation of the evaluation set if every row is scored independently.
+- Dev has one exact duplicate pair in college_physics; val has two cross-subject item pairs.
+- No same-item / conflicting-label cases were found — when the item repeats, the ground-truth letter agrees.
+
+### Potential Consequences
+- Models that memorize or cache by stem may get **double credit** for one underlying item.
+- Cross-subject leakage (e.g. clinical ↔ medicine) can make category-level scores less independent than they appear.
+- Cleaning decisions should use **question_options**, not stem-only counts; stem-only remains useful as a diagnostic for near-duplicates.
 
 ## Category and Subject-Level Bias Patterns
 By mapping the 57 subjects into four broad academic divisions (STEM, Humanities, Social Sciences, and Applied/Professional), highly localized patterns of bias were discovered:
@@ -158,14 +227,15 @@ By mapping the 57 subjects into four broad academic divisions (STEM, Humanities,
 
 ### Key Observations:
 - **Severe STEM Length Bias**: Correct answers in STEM subjects are extremely detailed (e.g. longer formulas or detailed step-by-step options). 
-   - **`global_facts`**: In the Test set, the correct option is the longest **72.0%** of the time.
-   - **`elementary_mathematics`**: The correct option is the longest **64.02%** of the time.
+   - **global_facts**: In the Test set, the correct option is the longest **72.0%** of the time.
+   - **elementary_mathematics**: The correct option is the longest **64.02%** of the time.
 - **Humanities Negation Overload**: Nearly half (**44.07%**) of all Humanities questions contain negation words (*"not"*, *"except"*, *"false"*). LLMs might struggle disproportionately with negative constraint reasoning, meaning Humanities scores might get influenced by this linguistic structure.
 
 ## Analysis Scripts
 All this information has been extracted using the following scripts -
-1. **[analyze_dataset.py](../results//analyze_dataset.py)**: Performs aggregate stats (class distribution, option length bias, duplicates, and anomaly count).
-2. **[find_specific_anomalies.py](../results/find_specific_anomalies.py)**: Prints the exact file names, line numbers, and contents of the questions containing missing values, identical options, or leakage.
-3. **[subject_bias_analysis.py](../results/subject_bias_analysis.py)**: Segments findings by academic categories and evaluates negation frequency.
-4. **[answer_position_bias.py](../results/answer_position_bias_test.csv)**: Checks the skewness towards a particular option per subject. 
-5. **[none_all_above_analysis](../results/none_all_above_test.csv)**: Checks the presence of catch-all options and their correctness when present.
+1. **[analyze_dataset.py](../experiments/analyze_dataset.py)**: Performs aggregate stats (class distribution, option length bias, duplicates, and anomaly count).
+2. **[find_specific_anomalies.py](../experiments/find_specific_anomalies.py)**: Prints the exact file names, line numbers, and contents of the questions containing missing values, identical options, or leakage.
+3. **[subject_bias_analysis.py](../experiments/subject_bias_analysis.py)**: Segments findings by academic categories and evaluates negation frequency.
+4. **[answer_position_bias.py](../experiments/answer_position_bias.py)**: Checks the skewness towards a particular option per subject.
+5. **[none_all_above_analysis.py](../experiments/none_all_above_analysis.py)**: Checks the presence of catch-all options and their correctness when present.
+6. **[find_duplicate_questions.py](../experiments/find_duplicate_questions.py)**: Finds repeated question stems / items within and across subjects (`--match question` screening vs `question_options` primary); writes detail, summary, and label-conflict CSVs under `results/`.

@@ -8,9 +8,7 @@ correct answer is disproportionately B or C (say), a model (or a human)
 could exploit that prior without reading the question at all.
 
 Uses a chi-square goodness-of-fit test against the expected uniform
-25%/25%/25%/25% distribution, both overall and per academic category
-(reusing the STEM/Humanities/Social Sciences/Other split from
-subject_bias_analysis.py).
+25%/25%/25%/25% distribution, both overall and per subject.
 
 Output
 ------
@@ -90,27 +88,26 @@ def wilson_hilferty_chi2_pvalue(chi2: float, df: int) -> float:
     return 0.5 * math.erfc(z / math.sqrt(2))
 
 
-def report(df: pd.DataFrame, label: str):
+def build_row(df: pd.DataFrame, label: str) -> dict:
+    """Compute one table row (letter %s, chi-square, p-value, significance) for a group."""
     total = len(df)
     counts = df['label'].value_counts().to_dict()
     chi2, p_value = chi_square_goodness_of_fit(counts, total)
 
-    print(f"\n=== {label} (n={total}) ===")
-    for l in LABELS:
-        c = counts.get(l, 0)
-        pct = (c / total * 100) if total else 0
-        bar = '#' * int(pct / 2)
-        print(f"  {l}: {c:5d}  ({pct:5.2f}%)  {bar}")
-    if chi2 is not None:
-        print(f"  Chi-square={chi2:.3f}, p={p_value:.4f} "
-              f"({'SIGNIFICANT skew at p<0.05' if p_value < 0.05 else 'not significant at p<0.05'})")
+    pcts = {l: (counts.get(l, 0) / total * 100 if total else 0.0) for l in LABELS}
+    significant = 'Significant' if (p_value is not None and p_value < 0.05) else 'Not Significant'
 
-    # Quick "always guess most common letter" heuristic accuracy
-    if counts:
-        most_common_letter, most_common_count = max(counts.items(), key=lambda kv: kv[1])
-        heuristic_acc = most_common_count / total * 100 if total else 0
-        print(f"  'Always guess {most_common_letter}' heuristic would score: {heuristic_acc:.2f}% "
-              f"(vs. 25% random chance)")
+    return {
+        'Subject': label,
+        'n': total,
+        'A': round(pcts['A'], 2),
+        'B': round(pcts['B'], 2),
+        'C': round(pcts['C'], 2),
+        'D': round(pcts['D'], 2),
+        'Chi-square': round(chi2, 3) if chi2 is not None else None,
+        'p-value': round(p_value, 4) if p_value is not None else None,
+        'Significant': significant,
+    }
 
 
 def run(args):
@@ -123,40 +120,29 @@ def run(args):
         print(f"No data found for split '{args.split}'. Check --split and your data_dir path.")
         return
 
-    report(df, f"OVERALL ({args.split} split)")
+    rows = [build_row(df, f"OVERALL ({args.split})")]
+    for subject in sorted(df['subject'].unique()):
+        rows.append(build_row(df[df['subject'] == subject], subject))
 
-    print("\n\n########## BY ACADEMIC CATEGORY ##########")
-    for cat in sorted(df['category'].unique()):
-        report(df[df['category'] == cat], cat)
+    table = pd.DataFrame(rows, columns=['Subject', 'n', 'A', 'B', 'C', 'D',
+                                         'Chi-square', 'p-value', 'Significant'])
 
     if args.per_subject:
-        print("\n\n########## BY SUBJECT (sorted by max skew) ##########")
-        subject_rows = []
-        for subject, sub_df in df.groupby('subject'):
-            total = len(sub_df)
-            counts = sub_df['label'].value_counts().to_dict()
-            max_pct = max(counts.get(l, 0) for l in LABELS) / total * 100 if total else 0
-            subject_rows.append((subject, total, max_pct))
-        subject_rows.sort(key=lambda r: r[2], reverse=True)
-        for subject, total, max_pct in subject_rows[:15]:
-            print(f"  {subject:45s} n={total:4d}  max-letter-share={max_pct:.2f}%")
+        # Sort subjects (excluding OVERALL) by skew, keep OVERALL pinned on top
+        overall_row = table[table['Subject'].str.startswith('OVERALL')]
+        subject_rows = table[~table['Subject'].str.startswith('OVERALL')]
+        subject_rows = subject_rows.reindex(
+            subject_rows[['A', 'B', 'C', 'D']].max(axis=1).sort_values(ascending=False).index
+        )
+        table = pd.concat([overall_row, subject_rows], ignore_index=True)
+
+    print("\n" + table.to_string(index=False))
 
     out_dir = os.path.join(_script_dir, '..', 'results')
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, f"answer_position_bias_{args.split}.csv")
-    summary_rows = []
-    for cat in df['category'].unique():
-        sub = df[df['category'] == cat]
-        counts = sub['label'].value_counts().to_dict()
-        row = {'group': cat, 'total': len(sub)}
-        row.update({l: counts.get(l, 0) for l in LABELS})
-        summary_rows.append(row)
-    overall_counts = df['label'].value_counts().to_dict()
-    overall_row = {'group': 'OVERALL', 'total': len(df)}
-    overall_row.update({l: overall_counts.get(l, 0) for l in LABELS})
-    summary_rows.append(overall_row)
-    pd.DataFrame(summary_rows).to_csv(out_path, index=False)
-    print(f"\nSaved summary to: {out_path}")
+    table.to_csv(out_path, index=False)
+    print(f"\nSaved table to: {out_path}")
 
 
 if __name__ == '__main__':
