@@ -1,62 +1,62 @@
-## Motivation
-- Models have begun to plateau, making it difficult to discern their abilities. 
-- Extend MMLU: more challenging, reasoning focused questions, expanding choices from 4 to 10.
-- Eliminates trivial and noisy questions in MMLU.
-- Drop in accuracy by 16 to 33%
-- Stability under diff prompts.
-- 24 diff prompts tested. 4-5% in MMLU but only 2$ in MMLU-Pro.
-- CoT performed better on MMLU-Pro unlike with MMLU. 
+# MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark
+### Assumptions
+- Accuracy is sufficient as the primary metric for comparing model performance.
+- Multiple-choice questions can be used to measure language understanding and reasoning.
+- Increasing the number of distractors reduces the possibility of using shortcuts compared with MMLU.
+- Increasing the number of options from 4 to up to 10 makes random guessing substantially harder.
+- Adding more challenging, reasoning-heavy questions makes the benchmark more discriminative as models improve.
+- College-level and reasoning-focused questions require more deliberate reasoning and are less likely to be solved through simple memorization or pattern matching.
+- Expert review and filtering improve the quality of the benchmark.
+- Greater robustness to prompt variations indicates a more stable benchmark.
 
-## Problems with MMLU
-1. Only 3 distractors. LLMs can exploit shortcuts to derive the ans leading to overestimation of LLMs performance and leading to a degree of instability.
-2. MMLU is knowledge driven and does not require reasoning and achieve better results when answered directly.
-3. There is portion of questions that are either unanswerable or mistakenly annotated. This leads to lower ceiling which the frontier models hit.
+### Possible Weaknesses
+- Multiple-choice questions still allow guessing.
+- Accuracy is still the primary evaluation metric.
+- The benchmark is English-only.
+- It does not test multimodal understanding.
+- It does not evaluate long-form/open-ended generation.
+- Increasing the number of distractors may reduce some shortcuts while introducing new ones.
+- Many additional distractors were generated using GPT-4-Turbo, which could introduce model-generated patterns or artifacts into the benchmark.
+- Questions come from multiple sources and undergo different filtering/construction procedures, which could introduce source-specific artifacts.
+- Some questions have fewer than 10 options, so the random baseline is not identical across all questions.
+- The answer-extraction procedure falls back to a random option when both extraction methods fail. The effect depends on how frequently this actually occurs.
+- Benchmark contamination is still possible, especially for the portion inherited from the original MMLU dataset.
 
-## MMLU-Pro
-- MMLU-Pro spans 14 diverse domains - maths, physics, law, engineering etc with over 12k Qs.
-- Has 10 options. reducing the probability to guess and increases the difficulty and robustness.
-- Increase in portion of college level exam problems. Require LLMs to deliberate reasoning. 
-- 2 rounds of expert reviews to reduce noise. First is expert verification and second uses SoTA LLMs to identify potential errors and employ annotators to perform more targeted verification. 
+### Questions
+- Did the design changes introduced by MMLU-Pro actually reduce the benchmark sensitivities observed in MMLU?
+- Does answer-only performance remain above chance when there are approximately 10 options instead of 4?
+- Does shuffling answer choices still affect performance?
+- Are correct-answer positions uniformly distributed across A-J?
+- Is answer length still correlated with correctness?
+- Do GPT-generated distractors introduce new structural artifacts?
+- Can models distinguish GPT-generated distractors from the original answer choices?
+- Do results differ based on question source: MMLU, STEM Website, TheoremQA, and SciBench?
+- Does the MMLU-derived subset behave differently from the newly introduced questions?
+- Are there duplicates or overlaps within the dataset or between its source datasets?
+- How frequently does answer extraction fail and trigger the random fallback?
+- If extraction-failure rates differ across models, could the random fallback affect model comparisons?
+- Why use random selection after extraction failure instead of marking the response incorrect?
+- Does robustness to prompt variations also imply robustness to other semantically irrelevant perturbations such as answer ordering or small typos?
+- Does Chain-of-Thought improve actual reasoning, or does the benchmark simply reward models that perform better when given additional inference tokens?
+- Are the improvements from CoT consistent across domains?
+- Does increasing the number of options improve benchmark quality, or primarily make the task harder?
 
-## Key Findings
-- GPT-4o achieves 72.6% and GPT-4-Turbo achieves 63.7% accuracy.
-- More discriminative. Gap b/w GPT-4o and GPT-4-Turbo in MMLU was just 1% while in MMLU Pro is 9%.
-- Open source models thoug not at a level of closed source still showed performace close to Clude-3-Sonnet.
-- MMLU-pro requires CoT to achieve promising results. Boosted GPT-4o by 19%.
-- Error analysis of GPT-4o revealed -
-    - 39% due to reasoning process
-    - 35% lack of domain knowledge
-    - 12% from computational errors. 
+### My Takeaways
+- MMLU-Pro addresses several known weaknesses of MMLU rather than simply making the questions harder.
+- Benchmark design has to evolve as model performance approaches saturation.
+- Increasing the number of answer choices can make guessing and shortcut-based strategies more difficult, but it does not guarantee that structural artifacts disappear.
+- A benchmark can be more difficult without necessarily being more robust.
+- Prompt robustness is one type of robustness. It does not establish robustness to answer ordering, formatting, textual noise, or other perturbations.
+- Dataset construction choices, including filtering, source selection, and generated distractors, become part of what the benchmark measures.
+- MMLU-Pro provides an interesting comparison with MMLU because several of its design decisions explicitly attempt to address limitations of the original benchmark.
 
-## Dataset 
-1. Original MMLU
-2. STEM Website
-3. TheoremQA
-- Scibench
-
-### Dataset Construction Pipeline
-- For MMLU dataset, 57 categories reduced to 14 and 8 models were evaluated. Q answered correctly by more than 4 models considered easy and removed. 
-> Did the design changes introduced by MMLU-Pro actually reduce the benchmark sensitivities observed in MMLU?
-- STEM website had discriptive QA, so GPT-4-Turbo was used to extract short answer and additional distractors for each Q. Incomplete and incorrect removed manually.
-- GPT-4-Turbo used to add additional distractor options. Also experimented to ensure that GPT-4-Turbo does not gain additional advantage from such augmentation procedure. 
-> Do GPT-generated distractors introduce new structural artifacts?
-> Can a model distinguish the original answer/options from generated distractors?
-> Does answer-only accuracy remain above chance when chance is ~10% rather than 25%?
-- Expert review. Phase 1 was verification of correctnedd and appropriateness which included verifying accuracy, removing unsuitable questions, etc. Phase 2 was ensuring distractor validity which involved using Gemini-5-pro to re-evaluate options to identify false negatived. Then experts manually reviewed them. 
-
-## Experimental Setup
-- Utilized 5 shot CoT approach. 
-    - Extending original options available from CoT Though Hub
-    - Selected 5 demostration examples for each discipline. 
-- For ans extraction 2 regex are used. If both fail the fallback mechanism selected an option at random 
-> How frequently does answer extraction fail and trigger the random fallback? Since extraction failures are replaced with a random answer rather than counted as incorrect, could differing extraction-failure rates introduce noise or bias into model comparisons?
-
-## Error Analysis of GPT-4o
-- Reasoning Errors (39%): Difficulties with logical reasoning even when it recalls correct info and knowledge. Likely due to dependence on recognizing patterns in training data
-- Lack of Specified Knowledge (35%): Errors such as incorrect financial calculations and misapplications of optical principles highlight this issue.
-- Calculation Errors (12%): Found instances where model had correct formula but makde computation mistakes.
-- Other errors: No selection error, question understanding error, generation ussues, annotation errors, ans extraction errors. Attributed to limitation in final response selection, complex text interpretation challenges, limitation in scope, etc.
-
-## Limitations
-- Limitations of MCQ format. Cannot capture the depth of comprehension & creative generations
-- Does not assess multi-model models.
+### Research Questions
+- Do the structural signals I observed in MMLU persist in MMLU-Pro?
+- Does increasing from 4 to approximately 10 answer choices reduce answer-only predictive performance?
+- Does MMLU-Pro reduce model sensitivity to answer-choice ordering?
+- Are GPT-generated distractors systematically distinguishable from human-written/original choices?
+- How much do answer length and answer position predict correctness in MMLU-Pro?
+- Do structural artifacts differ depending on the original source of the question?
+- Are MMLU-derived questions more susceptible to answer-only prediction or option-order sensitivity than newly sourced questions?
+- How robust is MMLU-Pro to controlled perturbations such as option shuffling and textual noise?
+- Can benchmark contamination be separated from structural answer-choice signals?
