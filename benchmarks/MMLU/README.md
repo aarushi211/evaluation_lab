@@ -161,3 +161,20 @@ For discussion, figures, interpretation, and limitations:
 - Dataset: [`analysis/dataset_observation.md`](./analysis/dataset_observation.md)
 - Experiments: [`analysis/experimental_findings.md`](./analysis/experimental_findings.md)
 - Substack Article: **[Click Here](https://aarushijain750597.substack.com/p/how-much-of-an-mmlu-score-comes-from?r=90nqwv&utm_campaign=post&utm_medium=web&showWelcomeOnShare=true)**
+
+## Citation
+```
+@article{hendryckstest2021,
+  title={Measuring Massive Multitask Language Understanding},
+  author={Dan Hendrycks and Collin Burns and Steven Basart and Andy Zou and Mantas Mazeika and Dawn Song and Jacob Steinhardt},
+  journal={Proceedings of the International Conference on Learning Representations (ICLR)},
+  year={2021}
+}
+
+@article{hendrycks2021ethics,
+  title={Aligning AI With Shared Human Values},
+  author={Dan Hendrycks and Collin Burns and Steven Basart and Andrew Critch and Jerry Li and Dawn Song and Jacob Steinhardt},
+  journal={Proceedings of the International Conference on Learning Representations (ICLR)},
+  year={2021}
+}
+```
