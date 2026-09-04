@@ -71,3 +71,29 @@ RAG-enabled model
 Same perturbations
 
 Compare robustness.
+
+# MMLU-Pro
+- Does answer-only performance remain above chance with ~10 options?
+- Did increasing the number and quality of distractors actually reduce
+  answer-choice artifacts?
+
+- Does option shuffling still substantially change performance?
+  - MMLU-Pro claims greater prompt robustness, but that does not
+    necessarily imply option-order robustness.
+
+- Are correct-answer positions balanced across A-J?
+- Is answer length correlated with correctness?
+- Do GPT-4-Turbo-generated distractors have detectable structural
+  differences from correct answers/original options?
+
+- How often does answer extraction fail?
+  - Does the random fallback affect reported accuracy?
+  - Does extraction failure vary by model?
+
+- Does the 56.6% MMLU-derived subset behave differently from questions
+  originating from STEM Website / TheoremQA / SciBench?
+
+- Are there duplicates or cross-source overlaps?
+
+- Does typo robustness improve compared with MMLU?
+- Does lexical negation show similar subject/domain-level behavior?
